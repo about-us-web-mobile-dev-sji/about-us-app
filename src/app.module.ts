@@ -1,15 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
 import { createObserveModule } from '@nestjs/observe';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import superAdminConfig from './config/super-admin.config.js';
 import databaseConfig from './config/data-base.config.js';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AuthModule } from './modules/auth/auth.module.js';
-import { UserModule } from './modules/user/user.module.js';
+import { UserModule } from './modules/user-off/user.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -17,28 +18,12 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [
-        superAdminConfig,
-        databaseConfig,
-      ],
+      load: [superAdminConfig, databaseConfig],
     }),
 
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
+    DatabaseModule,
 
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-
-        host: configService.getOrThrow<string>('database.host'),
-        port: configService.getOrThrow<number>('database.port'),
-        username: configService.getOrThrow<string>('database.username'),
-        password: configService.getOrThrow<string>('database.password'),
-        database: configService.getOrThrow<string>('database.database'),
-
-        entities: [],
-        synchronize: true,
-      }),
-    }),
+    EventEmitterModule.forRoot(),
 
     UserModule,
     AuthModule,

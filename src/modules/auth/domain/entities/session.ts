@@ -86,7 +86,7 @@ export class Session {
     }
     this.props.status = SessionStatus.REVOKED;
     this.props.revokedAt = new Date(now);
-    this.props.revocationReason = reason!?.trim() || 'No reason provided';
+    this.props.revocationReason = reason?.trim() || 'No reason provided';
   }
   
   toPrimitives(): SessionProps {
