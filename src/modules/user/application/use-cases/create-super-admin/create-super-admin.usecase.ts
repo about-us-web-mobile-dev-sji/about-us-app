@@ -1,24 +1,41 @@
-import { User } from '../../../domain/entities/user.enity.js';
-import { type UserRepository } from '../../../domain/repositories/i-user.repository.js';
-import { ConfigService } from '@nestjs/config';
-import { Injectable } from '@nestjs/common';
+import type { UserRepository } from '../../../domain/repositories/i-user.repository.js';
+import { SuperAdminCreatedEvent } from '../../../domain/events/super-admin-created.event.js';
+import type { SuperAdminEventsGateway } from '../../gateways/i-super-admin-events.gateway.js';
 
-@Injectable()
 export class CreateSuperAdminUseCase {
+  private pending: Promise<void> | undefined;
   constructor(
-    private readonly configService: ConfigService,
+    private readonly options: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+    },
     private readonly userRepository: UserRepository,
+    private readonly events: SuperAdminEventsGateway,
   ) {}
-
-  async handle(): Promise<void> {
-    if (!(await this.userRepository.superAdminExists())) {
-      const newSUperAdmin = User.create({
-        firstName: this.configService.get('super-admin').firstName,
-        lastName: this.configService.get('super-admin').lastName,
-        email: this.configService.get('super-admin').email,
+  handle(): Promise<void> {
+    if (!this.pending)
+      this.pending = this.createAndPublish().finally(() => {
+        this.pending = undefined;
       });
-      await this.userRepository.save(newSUperAdmin);
+    return this.pending;
+  }
+  private async createAndPublish(): Promise<void> {
+    let user = await this.userRepository.findSuperAdmin();
+    if (!user) {
+      const email = this.options.email?.trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        throw new Error('SUPER_ADMIN_EMAIL must be configured');
+      user = await this.userRepository.createInitialSuperAdmin({
+        ...this.options,
+        email,
+      });
     }
-    return Promise.resolve();
+    if (!user.id)
+      throw new Error(
+        'Super admin must be persisted before publishing its creation',
+      );
+    // Redelivery also repairs an interrupted User → Auth bootstrap.
+    await this.events.publish(new SuperAdminCreatedEvent(user.id, user.email));
   }
 }

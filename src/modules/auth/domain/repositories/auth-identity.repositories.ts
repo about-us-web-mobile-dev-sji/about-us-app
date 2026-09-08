@@ -5,6 +5,12 @@ import type {
 import type { AuthProvider } from '../enums/auth-provider.enums.js';
 
 export interface AuthIdentityRepository {
+  findBySubjectAndProvider(
+    subjectId: string,
+    provider: AuthProvider,
+  ): Promise<AuthIdentity | null>;
+  /** Atomically preserve any existing matching identity without replacing its password. */
+  createIfAbsent(input: NewAuthIdentity): Promise<AuthIdentity>;
   findById(id: string): Promise<AuthIdentity | null>;
   findByProvider(
     provider: AuthProvider,
