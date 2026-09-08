@@ -1,4 +1,7 @@
-import { EmailLoginUseCase } from '../../application/use-cases/email-login.usecase.js';
+import { EmailLoginDto } from './dto/email-login.dto.js';
+import { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import { AuthResponseMapper } from './mappers/auth-response.mapper.js';
+import { EmailLoginUseCase } from '../../application/use-cases/commands/email-login/EmailLogin.js';
 import {
   Body,
   Controller,
@@ -9,14 +12,13 @@ import {
   Post,
   Req,
   UnauthorizedException,
-  BadRequestException,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { GoogleLoginUseCase } from '../../application/use-cases/google-login.usecase.js';
-import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.usecase.js';
-import { AuthenticateUseCase } from '../../application/use-cases/authenticate.usecase.js';
-import { LogoutUseCase } from '../../application/use-cases/logout.usecase.js';
+import { GoogleLoginUseCase } from '../../application/use-cases/commands/google-login/GoogleLogin.js';
+import { RefreshTokenUseCase } from '../../application/use-cases/commands/refresh-token/RefreshToken.js';
+import { AuthenticateUseCase } from '../../application/use-cases/queries/authenticate/Authenticate.js';
+import { LogoutUseCase } from '../../application/use-cases/commands/logout/Logout.js';
 import type { GoogleIdentity } from '../../application/models/google-identity.js';
 import { GoogleAuthGuard } from '../services/google-auth-guard.services.js';
 
@@ -35,24 +37,15 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
-  login(@Body() body: unknown, @Req() req: Request) {
-    if (
-      !body ||
-      typeof body !== 'object' ||
-      !('email' in body) ||
-      typeof body.email !== 'string' ||
-      !('password' in body) ||
-      typeof body.password !== 'string' ||
-      body.email.length > 320 ||
-      body.password.length > 1024
-    ) {
-      throw new BadRequestException('email and password are required');
-    }
-    return this.emailLogin.handle({
-      email: body.email,
-      password: body.password,
-      userAgent: req.get('user-agent'),
-    });
+  async login(@Body() body: unknown, @Req() req: Request) {
+    const dto = EmailLoginDto.parse(body);
+    return AuthResponseMapper.token(
+      await this.emailLogin.handle({
+        email: dto.email,
+        password: dto.password,
+        userAgent: req.get('user-agent'),
+      }),
+    );
   }
   @Get('google')
   @UseGuards(GoogleAuthGuard)
@@ -62,36 +55,34 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @Header('Cache-Control', 'no-store')
   @Header('Referrer-Policy', 'no-referrer')
-  callback(@Req() req: Request) {
-    return this.googleLogin.handle(
-      req.user as GoogleIdentity,
-      req.get('user-agent'),
+  async callback(@Req() req: Request) {
+    return AuthResponseMapper.token(
+      await this.googleLogin.handle({
+        profile: req.user as GoogleIdentity,
+        userAgent: req.get('user-agent'),
+      }),
     );
   }
   @Post('refresh')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
-  refresh(@Body() body: unknown) {
-    if (
-      !body ||
-      typeof body !== 'object' ||
-      !('refreshToken' in body) ||
-      typeof body.refreshToken !== 'string' ||
-      !body.refreshToken ||
-      body.refreshToken.length > 8192
-    )
-      throw new BadRequestException('refreshToken is required');
-    return this.refreshToken.handle(body.refreshToken);
+  async refresh(@Body() body: unknown) {
+    const dto = RefreshTokenDto.parse(body);
+    return AuthResponseMapper.token(
+      await this.refreshToken.handle({ refreshToken: dto.refreshToken }),
+    );
   }
   @Get('me')
   @Header('Cache-Control', 'no-store')
-  me(@Req() req: Request) {
-    return this.authenticate.handle(this.bearer(req));
+  async me(@Req() req: Request) {
+    return AuthResponseMapper.subject(
+      await this.authenticate.handle({ accessToken: this.bearer(req) }),
+    );
   }
   @Post('logout')
   @HttpCode(204)
   logout(@Req() req: Request) {
-    return this.logoutUseCase.handle(this.bearer(req));
+    return this.logoutUseCase.handle({ accessToken: this.bearer(req) });
   }
   private bearer(req: Request) {
     const match = /^Bearer ([^\s]+)$/i.exec(req.get('authorization') ?? '');

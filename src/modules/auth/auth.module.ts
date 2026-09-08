@@ -1,12 +1,13 @@
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
-import { SqliteDatabase } from '../../shared/infrastructure/database/sqlite.database.js';
-import {
-  SUPER_ADMIN_EVENTS,
-  type SuperAdminEventsGateway,
-} from '../user/application/gateways/i-super-admin-events.gateway.js';
+import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TypeormAuthIdentityRepository } from './infrastructure/persistence/typeorm-auth-identity.repository.js';
+import { TypeormSessionRepository } from './infrastructure/persistence/typeorm-session.repository.js';
+import { AuthIdentityEntity } from './infrastructure/persistence/typeorm/auth-identity.entity.js';
+import { AuthSessionEntity } from './infrastructure/persistence/typeorm/auth-session.entity.js';
 import { SuperAdminCreatedListener } from './infrastructure/events/super-admin-created.listener.js';
-import { CreateSuperAdminIdentityUseCase } from './application/use-cases/create-super-admin-identity.usecase.js';
-import { EmailLoginUseCase } from './application/use-cases/email-login.usecase.js';
+import { CreateSuperAdminIdentityUseCase } from './application/use-cases/commands/create-super-admin-identity/CreateSuperAdminIdentity.js';
+import { EmailLoginUseCase } from './application/use-cases/commands/email-login/EmailLogin.js';
 import { APP_FILTER } from '@nestjs/core';
 import { AuthApplicationExceptionFilter } from './infrastructure/http/auth-application-exception.filter.js';
 import { Module } from '@nestjs/common';
@@ -15,12 +16,12 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import googleConfig from '../../config/google.config.js';
 import authConfig from '../../config/auth.config.js';
-import { UserModule } from '../user/user.module.js';
-import { UserAccountService } from '../user/application/user-account.service.js';
-import { GoogleLoginUseCase } from './application/use-cases/google-login.usecase.js';
-import { RefreshTokenUseCase } from './application/use-cases/refresh-token.usecase.js';
-import { AuthenticateUseCase } from './application/use-cases/authenticate.usecase.js';
-import { LogoutUseCase } from './application/use-cases/logout.usecase.js';
+import { UserModule } from '../user-off/user.module.js';
+import { UserAccountService } from '../user-off/application/user-account.service.js';
+import { GoogleLoginUseCase } from './application/use-cases/commands/google-login/GoogleLogin.js';
+import { RefreshTokenUseCase } from './application/use-cases/commands/refresh-token/RefreshToken.js';
+import { AuthenticateUseCase } from './application/use-cases/queries/authenticate/Authenticate.js';
+import { LogoutUseCase } from './application/use-cases/commands/logout/Logout.js';
 import { SessionValidator } from './application/services/session-validator.service.js';
 import { AccessTokenIssuer } from './application/services/access-token-issuer.service.js';
 import {
@@ -47,8 +48,7 @@ import {
   SESSION_REPOSITORY,
   type SessionRepository,
 } from './domain/repositories/session.repositories.js';
-import { SqliteAuthIdentityRepository } from './infrastructure/persistence/sqlite-auth-identity.repository.js';
-import { SqliteSessionRepository } from './infrastructure/persistence/sqlite-session.repository.js';
+// sqlite adapters removed — using TypeORM-backed repositories
 import { UserAuthSubjectGateway } from './infrastructure/services/user-auth-subject.gateway.js';
 import {
   NestJwtService,
@@ -62,6 +62,7 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
 @Module({
   imports: [
     DatabaseModule,
+    TypeOrmModule.forFeature([AuthIdentityEntity, AuthSessionEntity]),
     UserModule,
     ConfigModule.forFeature(googleConfig),
     ConfigModule.forFeature(authConfig),
@@ -101,21 +102,7 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
         passwords: PasswordEncryptionGateway,
       ) => new CreateSuperAdminIdentityUseCase(identities, passwords),
     },
-    {
-      provide: SuperAdminCreatedListener,
-      inject: [
-        SUPER_ADMIN_EVENTS,
-        CreateSuperAdminIdentityUseCase,
-        ConfigService,
-        UserAccountService,
-      ],
-      useFactory: (
-        events: SuperAdminEventsGateway,
-        createIdentity: CreateSuperAdminIdentityUseCase,
-        config: ConfigService,
-        users: UserAccountService,
-      ) => new SuperAdminCreatedListener(events, createIdentity, config, users),
-    },
+    SuperAdminCreatedListener,
     {
       provide: EmailLoginUseCase,
       inject: [
@@ -166,15 +153,15 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
     },
     {
       provide: AUTH_IDENTITY_REPOSITORY,
-      useFactory: (database: SqliteDatabase) =>
-        new SqliteAuthIdentityRepository(database),
-      inject: [SqliteDatabase],
+      useFactory: (repo: Repository<AuthIdentityEntity>) =>
+        new TypeormAuthIdentityRepository(repo),
+      inject: [getRepositoryToken(AuthIdentityEntity)],
     },
     {
       provide: SESSION_REPOSITORY,
-      useFactory: (database: SqliteDatabase) =>
-        new SqliteSessionRepository(database),
-      inject: [SqliteDatabase],
+      useFactory: (repo: Repository<AuthSessionEntity>) =>
+        new TypeormSessionRepository(repo),
+      inject: [getRepositoryToken(AuthSessionEntity)],
     },
     {
       provide: ACCESS_TOKEN_SERVICE,

@@ -1,5 +1,7 @@
 # Authentification Google et email/mot de passe
 
+> Les use cases suivent désormais [la structure commands/queries](../../../docs/use-case-structure.md), avec des fichiers Input et Output séparés. Les sections historiques sur SQLite ci-dessous sont obsolètes ; la configuration actuelle est décrite dans [les changements User/Auth](../../../docs/user-module-changes.md).
+
 ## Configuration et lancement
 
 Le backend utilise le flux OAuth par redirection de `passport-google-oauth20`.
