@@ -16,10 +16,10 @@ export class RefreshToken {
 
   static create(
     session: Session,
-    input: Pick<RefreshTokenProps, 'issuer'>,
-    now = new Date(),
+    input: Pick<RefreshTokenProps, 'issuer'>
   ): RefreshToken {
-    if (!session.isActive(now)) throw new Error('Session is not active');
+    const now = new Date();
+    if (!session.isActive()) throw new Error('Session is not active');
     if (!input.issuer.trim()) {
       throw new Error('Issuer is required');
     }
