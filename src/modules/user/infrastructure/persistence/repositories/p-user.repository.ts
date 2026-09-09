@@ -5,6 +5,7 @@ import type { PUser } from '../entity/p-user.entity.js';
 import { ConfigService } from '@nestjs/config';
 import UserStatus from '../../../domain/enum/user-status.enum.js';
 import { UserPersistenceMapper } from '../mappers/user.persistence.mapper.js';
+import UserRole from '../../../domain/enum/user-role.enum.js';
 
 export class PUserRepository implements UserRepository {
   private readonly bd: PUser[] = [
@@ -15,6 +16,7 @@ export class PUserRepository implements UserRepository {
       lastName: 'Martin',
       email: 'alice@example.com',
       status: UserStatus.ACTIVE,
+      role: UserRole.ADMINISTRATOR,
     },
     {
       id: '22222222-2222-4222-8222-222222222222',
@@ -23,6 +25,7 @@ export class PUserRepository implements UserRepository {
       lastName: 'Dubois',
       email: 'paul@example.com',
       status: UserStatus.ACTIVE,
+      role: UserRole.SUPER_ADMIN,
     },
     {
       id: '33333333-3333-4333-8333-333333333333',
@@ -31,6 +34,7 @@ export class PUserRepository implements UserRepository {
       lastName: 'Bernard',
       email: 'marie@example.com',
       status: UserStatus.SUSPENDED,
+      role: UserRole.MEMBER,
     },
   ];
 
@@ -52,6 +56,7 @@ export class PUserRepository implements UserRepository {
       lastName: user.lastName,
       email: user.email,
       status: user.status,
+      role: user.role,
     };
     const persistedUser: PUser = { ...props };
     const index = this.bd.findIndex((entry) => entry.id === props.id);
@@ -85,6 +90,9 @@ export class PUserRepository implements UserRepository {
           return false;
         }
       }
+      if (user.role === UserRole.SUPER_ADMIN) {
+        return false;
+      }
       return true;
     });
 
@@ -103,6 +111,7 @@ export class PUserRepository implements UserRepository {
           lastName: user.lastName,
           email: user.email,
           status: user.status,
+          role: user.role,
         })
       ),
       total,

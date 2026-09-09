@@ -1,5 +1,6 @@
 import { UUID } from "crypto";
 import UserStatus from "../enum/user-status.enum.js";
+import UserRole from "../enum/user-role.enum.js";
 
 interface UserProps {
   id?: UUID;
@@ -8,6 +9,7 @@ interface UserProps {
   lastName: string | null;
   email: string;
   status: UserStatus;
+  role: UserRole;
 }
 
 export class User {
@@ -19,6 +21,7 @@ export class User {
     firstName?: string | null;
     lastName?: string | null;
     email: string;
+    role?: UserRole | null;
   }): User {
     return new User({
       id: undefined,
@@ -27,6 +30,7 @@ export class User {
       lastName: input.lastName ?? null,
       email: input.email,
       status: UserStatus.ACTIVE,
+      role: input.role ?? UserRole.MEMBER,
     });
   }
 
@@ -40,6 +44,7 @@ export class User {
   get lastName(): string | null {return this.props.lastName;}
   get email(): string {return this.props.email;}
   get status(): UserStatus {return this.props.status;}
+  get role(): UserRole {return this.props.role;}
 
   block(): void {
     if (this.props.status === UserStatus.SUSPENDED) return;

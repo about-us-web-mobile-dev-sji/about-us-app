@@ -50,6 +50,7 @@ export class UserPersistenceMapper {
             lastName: pUser.lastName,
             email: pUser.email,
             status: pUser.status as UserStatus,
+            role: pUser.role,
         });
     }
 

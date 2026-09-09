@@ -5,6 +5,7 @@ import { User } from '../../../domain/entities/user.enity.js';
 import UserStatus from '../../../domain/enum/user-status.enum.js';
 import { PUserRepository } from './p-user.repository.js';
 import { UserPersistenceMapper } from '../mappers/user.persistence.mapper.js';
+import UserRole from '../../../domain/enum/user-role.enum.js';
 
 describe('PUserRepository', () => {
   let configService: ConfigService;
@@ -22,6 +23,7 @@ describe('PUserRepository', () => {
     const user = User.create({
       email: 'admin@example.com',
       firstName: 'Admin',
+      role: UserRole.ADMINISTRATOR,
     });
     user.block();
 
@@ -39,7 +41,8 @@ describe('PUserRepository', () => {
   it('replaces an existing record by identifier instead of appending it', async () => {
     const repository = new PUserRepository(configService, userPersistenceMapper);
     const saved = await repository.save(
-      User.create({ email: 'admin@example.com' }),
+      User.create({ email: 'admin@example.com', 
+        role: UserRole.ADMINISTRATOR }),
     );
     const updated = User.reconstitute({
       id: saved.id!,
@@ -47,6 +50,7 @@ describe('PUserRepository', () => {
       lastName: 'Updated',
       email: 'user@example.com',
       status: UserStatus.ACTIVE,
+      role: UserRole.SUPER_ADMIN,
     });
 
     expect((await repository.save(updated)).id).toBe(saved.id);
@@ -61,6 +65,7 @@ describe('PUserRepository', () => {
       lastName: null,
       email: 'admin@example.com',
       status: UserStatus.ACTIVE,
+      role: UserRole.SUPER_ADMIN,
     });
 
     expect((await repository.save(user)).id).toBe(user.id);
