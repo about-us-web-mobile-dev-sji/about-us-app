@@ -3,6 +3,7 @@ import UserStatus from "../enum/user-status.enum.js";
 
 interface UserProps {
   id?: UUID;
+  schoolId?: string;
   firstName: string | null;
   lastName: string | null;
   email: string;
@@ -14,12 +15,14 @@ export class User {
   private constructor(private props: UserProps) {}
 
   static create(input: {
+    schoolId?: string;
     firstName?: string | null;
     lastName?: string | null;
     email: string;
   }): User {
     return new User({
       id: undefined,
+      schoolId: input.schoolId,
       firstName: input.firstName ?? null,
       lastName: input.lastName ?? null,
       email: input.email,
@@ -27,11 +30,12 @@ export class User {
     });
   }
 
-  static reconstitute(props: Required<UserProps>): User {
+  static reconstitute(props: Required<Omit<UserProps, 'schoolId'>> & Pick<UserProps, 'schoolId'>): User {
     return new User(props);
   }
 
   get id(): UUID | undefined { return this.props.id;}
+  get schoolId(): string | undefined { return this.props.schoolId; }
   get firstName(): string | null {return this.props.firstName;}
   get lastName(): string | null {return this.props.lastName;}
   get email(): string {return this.props.email;}

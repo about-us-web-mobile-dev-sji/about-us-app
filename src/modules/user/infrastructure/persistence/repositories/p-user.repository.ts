@@ -10,6 +10,7 @@ export class PUserRepository implements UserRepository {
   private readonly bd: PUser[] = [
     {
       id: '11111111-1111-4111-8111-111111111111',
+      schoolId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       firstName: 'Alice',
       lastName: 'Martin',
       email: 'alice@example.com',
@@ -17,6 +18,7 @@ export class PUserRepository implements UserRepository {
     },
     {
       id: '22222222-2222-4222-8222-222222222222',
+      schoolId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       firstName: 'Paul',
       lastName: 'Dubois',
       email: 'paul@example.com',
@@ -24,6 +26,7 @@ export class PUserRepository implements UserRepository {
     },
     {
       id: '33333333-3333-4333-8333-333333333333',
+      schoolId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       firstName: 'Marie',
       lastName: 'Bernard',
       email: 'marie@example.com',
@@ -44,6 +47,7 @@ export class PUserRepository implements UserRepository {
   async save(user: User): Promise<User> {
     const props = {
       id: user.id ?? randomUUID(),
+      schoolId: user.schoolId,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -66,6 +70,9 @@ export class PUserRepository implements UserRepository {
 
     let filteredUsers = this.bd.filter((user) => {
       if (filters.status && user.status !== filters.status) {
+        return false;
+      }
+      if (filters.schoolId && user.schoolId !== filters.schoolId) {
         return false;
       }
       if (filters.search) {
@@ -91,6 +98,7 @@ export class PUserRepository implements UserRepository {
       items: paginatedUsers.map((user) =>
         this.userPersistenceMapper.toDomain({
           id: user.id,
+          schoolId: user.schoolId,
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,

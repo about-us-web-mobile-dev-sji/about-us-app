@@ -2,6 +2,7 @@ import type UserStatus from '../../../domain/enum/user-status.enum.js';
 
 export interface UserResponse {
   id: string | undefined;
+  schoolId: string | undefined;
   firstName: string | null;
   lastName: string | null;
   email: string;

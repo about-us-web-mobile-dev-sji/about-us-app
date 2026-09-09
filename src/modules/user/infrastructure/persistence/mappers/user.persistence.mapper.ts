@@ -15,6 +15,7 @@ export class UserPersistenceMapper {
         const filters: UserFilters = {
             status: userCommand.status,
             search: userCommand.search,
+            schoolId: userCommand.schoolId,
         };
         const pagination: PaginationParams = {
             page: Number(userCommand.page ?? 1),
@@ -26,6 +27,7 @@ export class UserPersistenceMapper {
     toDomain(pUser: PUser): User {
         return User.reconstitute({
             id: pUser.id as `${string}-${string}-${string}-${string}-${string}`,
+            schoolId: pUser.schoolId,
             firstName: pUser.firstName,
             lastName: pUser.lastName,
             email: pUser.email,
@@ -37,6 +39,7 @@ export class UserPersistenceMapper {
         return {
             items: listUsersOutput.items.map((user) => ({
                 id: user.id,
+                schoolId: user.schoolId,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,

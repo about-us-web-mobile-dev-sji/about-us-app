@@ -15,6 +15,7 @@ export interface UserRepository {
 export interface UserFilters {
   status?: UserStatus;
   search?: string;
+  schoolId?: string;
 }
 
 export interface PaginationParams {

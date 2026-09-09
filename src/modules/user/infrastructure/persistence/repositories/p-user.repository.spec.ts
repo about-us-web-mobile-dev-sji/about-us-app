@@ -4,18 +4,21 @@ import { beforeEach } from 'vitest';
 import { User } from '../../../domain/entities/user.enity.js';
 import UserStatus from '../../../domain/enum/user-status.enum.js';
 import { PUserRepository } from './p-user.repository.js';
+import { UserPersistenceMapper } from '../mappers/user.persistence.mapper.js';
 
 describe('PUserRepository', () => {
   let configService: ConfigService;
+  let userPersistenceMapper: UserPersistenceMapper;
 
   beforeEach(() => {
     configService = new ConfigService({
       'super-admin': { email: 'admin@example.com' },
     });
+    userPersistenceMapper = new UserPersistenceMapper();
   });
 
   it('saves a new user with an identifier and preserves domain fields', async () => {
-    const repository = new PUserRepository(configService);
+    const repository = new PUserRepository(configService, userPersistenceMapper);
     const user = User.create({
       email: 'admin@example.com',
       firstName: 'Admin',
@@ -34,7 +37,7 @@ describe('PUserRepository', () => {
   });
 
   it('replaces an existing record by identifier instead of appending it', async () => {
-    const repository = new PUserRepository(configService);
+    const repository = new PUserRepository(configService, userPersistenceMapper);
     const saved = await repository.save(
       User.create({ email: 'admin@example.com' }),
     );
@@ -51,7 +54,7 @@ describe('PUserRepository', () => {
   });
 
   it('inserts users with existing identifiers and isolates repository instances', async () => {
-    const repository = new PUserRepository(configService);
+    const repository = new PUserRepository(configService, userPersistenceMapper);
     const user = User.reconstitute({
       id: randomUUID(),
       firstName: null,
@@ -62,8 +65,20 @@ describe('PUserRepository', () => {
 
     expect((await repository.save(user)).id).toBe(user.id);
     expect(await repository.superAdminExists()).toBe(true);
-    expect(await new PUserRepository(configService).superAdminExists()).toBe(
+    expect(await new PUserRepository(configService, userPersistenceMapper).superAdminExists()).toBe(
       false,
     );
+  });
+
+  it('filters users by school identifier without loading the school module', async () => {
+    const repository = new PUserRepository(configService, userPersistenceMapper);
+
+    const result = await repository.getAll(
+      { schoolId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
+      { page: 1, limit: 10 },
+    );
+
+    expect(result.items).toHaveLength(2);
+    expect(result.items.every((user) => user.schoolId === 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')).toBe(true);
   });
 });
