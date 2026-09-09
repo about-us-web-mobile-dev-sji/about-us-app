@@ -7,20 +7,38 @@ import type { PaginationParams, UserFilters } from '../../../domain/repositories
 import type { ListUsersRequest } from '../../api/requests/list-users.request.js';
 import type { ListUsersResponse } from '../../api/responses/list-users.response.js';
 import type { PUser } from '../entity/p-user.entity.js';
+import type { UpdateUserStatusInput } from '../../../application/use-cases/command/update-user-status.input.js';
+import { UpdateUserStatusRequest } from '../../api/requests/update-user-status.request.js';
+import { UpdateUserStatusOutput } from '../../../application/use-cases/command/update-user-status.output.js';
+import { UpdateUserStatusResponse } from '../../api/responses/update-user-status.response.js';
 
 @Injectable()
 export class UserPersistenceMapper {
 
-    toCommandInput(userCommand: ListUsersRequest): ListUsersInput {
+    toCommandInput(userCommand: ListUsersRequest): ListUsersInput;
+    toCommandInput(userId: string, updateUserStatusRequest: UpdateUserStatusRequest): UpdateUserStatusInput;
+
+    toCommandInput(param: ListUsersRequest | string, updateUserStatusRequest?: UpdateUserStatusRequest): ListUsersInput | UpdateUserStatusInput {
+        if (typeof param === 'string') {
+            if (!updateUserStatusRequest) throw new Error('Le statut utilisateur est requis');
+
+            return {
+                userId: param as `${string}-${string}-${string}-${string}-${string}`,
+                status: updateUserStatusRequest.status,
+            };
+        }
+
         const filters: UserFilters = {
-            status: userCommand.status,
-            search: userCommand.search,
-            schoolId: userCommand.schoolId,
+            status: param.status,
+            search: param.search,
+            schoolId: param.schoolId,
         };
+
         const pagination: PaginationParams = {
-            page: Number(userCommand.page ?? 1),
-            limit: Number(userCommand.limit ?? 10),
+            page: Number(param.page ?? 1),
+            limit: Number(param.limit ?? 10),
         };
+
         return { filters, pagination };
     }
 
@@ -35,20 +53,31 @@ export class UserPersistenceMapper {
         });
     }
 
-    toResponse(listUsersOutput: ListUsersOutput): ListUsersResponse {
+    toResponse(listUsersOutput: ListUsersOutput): ListUsersResponse;
+    toResponse(updateUserStatusOutput: UpdateUserStatusOutput): UpdateUserStatusResponse;
+
+    toResponse(output: ListUsersOutput | UpdateUserStatusOutput): ListUsersResponse | UpdateUserStatusResponse {
+        if ('user' in output) {
+            return {
+                user: output.user,
+            };
+        }
+
         return {
-            items: listUsersOutput.items.map((user) => ({
+            items: output.items.map((user) => ({
                 id: user.id,
                 schoolId: user.schoolId,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
                 status: user.status,
-            })),
-            total: listUsersOutput.total,
-            page: listUsersOutput.page,
-            limit: listUsersOutput.limit,
-            totalPages: listUsersOutput.totalPages,
+            })), 
+            total: output.total,
+            page: output.page,
+            limit: output.limit,
+            totalPages: output.totalPages,
         };
     }
+
+
 }

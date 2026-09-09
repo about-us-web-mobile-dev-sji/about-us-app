@@ -111,4 +111,12 @@ export class PUserRepository implements UserRepository {
       totalPages: Math.ceil(total / pagination.limit),
     };
   }
+
+  async findById(id: string): Promise<User | null> {
+    const pUser = this.bd.find((user) => user.id === id);
+    if (!pUser) {
+      return null;
+    }
+    return this.userPersistenceMapper.toDomain(pUser);
+  }
 }

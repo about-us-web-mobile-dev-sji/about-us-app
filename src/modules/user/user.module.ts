@@ -7,6 +7,7 @@ import { SuperAdminInitializer } from './infrastructure/startup/super-admin-init
 import { UserController } from './infrastructure/api/controllers/user.controller.js';
 import { UserPersistenceMapper } from './infrastructure/persistence/mappers/user.persistence.mapper.js';
 import { ListUsers } from './application/use-cases/queries/list-users/list-users.js';
+import { UpdateUserStatus } from './application/use-cases/command/update-user-status.js';
 
 @Module({
   imports: [ConfigModule],
@@ -14,6 +15,7 @@ import { ListUsers } from './application/use-cases/queries/list-users/list-users
   providers: [
     UserPersistenceMapper,
     ListUsers,
+    UpdateUserStatus,
     {
       provide: USER_REPOSITORY,
       useFactory: (config: ConfigService, mapper: UserPersistenceMapper) =>

@@ -1,3 +1,4 @@
+import { UUID } from 'crypto';
 import { User } from '../entities/user.enity.js';
 import UserStatus from '../enum/user-status.enum.js';
 
@@ -6,10 +7,8 @@ export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 export interface UserRepository {
   superAdminExists(): Promise<boolean>;
   save(user: User): Promise<User>;
-  getAll(
-    filters: UserFilters,
-    pagination: PaginationParams
-  ): Promise<PaginatedResult<User>>;
+  getAll(filters: UserFilters, pagination: PaginationParams): Promise<PaginatedResult<User>>;
+  findById(id: UUID): Promise<User | null>;
 }
 
 export interface UserFilters {
