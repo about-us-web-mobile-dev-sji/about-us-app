@@ -10,7 +10,7 @@ import databaseConfig from './config/data-base.config.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AuthModule } from './modules/auth/auth.module.js';
-import { UserModule } from './modules/user-off/user.module.js';
+import { UserModule } from './modules/user/user.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 

@@ -5,9 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import type { INestApplication } from '@nestjs/common';
 import { SuperAdminCreatedListener } from './super-admin-created.listener.js';
 import { CreateSuperAdminIdentityUseCase } from '../../application/use-cases/commands/create-super-admin-identity/CreateSuperAdminIdentity.js';
-import { UserAccountService } from '../../../user-off/application/user-account.service.js';
-import { NestSuperAdminEventsGateway } from '../../../user-off/infrastructure/events/nest-super-admin-events.gateway.js';
-import { SuperAdminCreatedEvent } from '../../../user-off/domain/events/super-admin-created.event.js';
+import { UserAccountService } from '../../../user/application/user-account.service.js';
+import { NestSuperAdminEventsGateway } from '../../../user/infrastructure/events/nest-super-admin-events.gateway.js';
+import { SuperAdminCreatedEvent } from '../../../user/domain/events/super-admin-created.event.js';
 describe('SuperAdminCreatedListener event integration', () => {
   let app: INestApplication;
   afterEach(async () => {

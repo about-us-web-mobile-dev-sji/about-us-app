@@ -3,7 +3,12 @@ import { UserEntity } from './typeorm/user.entity.js';
 import { User } from '../../domain/entities/user.entity.js';
 import { GlobalRole } from '../../domain/enum/global-role.enum.js';
 import { Email } from '../../domain/value-objects/email.js';
-import type { UserRepository } from '../../domain/repositories/i-user.repository.js';
+import type {
+  PaginatedResult,
+  PaginationParams,
+  UserFilters,
+  UserRepository,
+} from '../../domain/repositories/i-user.repository.js';
 import { SuperAdminEmailConflictException } from '../../domain/exceptions/super-admin-email-conflict.exception.js';
 import { UserEmailAlreadyUsedException } from '../../domain/exceptions/user-email-already-used.exception.js';
 import { UserMapper } from './mappers/user.mapper.js';
@@ -27,6 +32,34 @@ export class TypeormUserRepository implements UserRepository {
   }
   async superAdminExists() {
     return (await this.findSuperAdmin()) !== null;
+  }
+  async getAll(
+    filters: UserFilters,
+    pagination: PaginationParams,
+  ): Promise<PaginatedResult<User>> {
+    const query = this.repo.createQueryBuilder('user');
+
+    if (filters.status) query.andWhere('user.status = :status', { status: filters.status });
+    if (filters.search) {
+      query.andWhere(
+        '(LOWER(user.firstName) LIKE :search OR LOWER(user.lastName) LIKE :search OR LOWER(user.email) LIKE :search)',
+        { search: `%${filters.search.toLowerCase()}%` },
+      );
+    }
+    query.andWhere('user.globalRole != :superAdmin', { superAdmin: GlobalRole.SUPER_ADMIN });
+
+    const [rows, total] = await query
+      .skip((pagination.page - 1) * pagination.limit)
+      .take(pagination.limit)
+      .getManyAndCount();
+
+    return {
+      items: rows.map((row) => UserMapper.toDomain(row)),
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      totalPages: Math.ceil(total / pagination.limit),
+    };
   }
   async createInitialSuperAdmin(input: {
     email: string;
