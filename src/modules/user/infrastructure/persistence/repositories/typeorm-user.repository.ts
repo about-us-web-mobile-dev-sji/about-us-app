@@ -33,6 +33,7 @@ export class TypeormUserRepository implements UserRepository {
   async superAdminExists() {
     return (await this.findSuperAdmin()) !== null;
   }
+
   async getAll(
     filters: UserFilters,
     pagination: PaginationParams,
@@ -61,6 +62,7 @@ export class TypeormUserRepository implements UserRepository {
       totalPages: Math.ceil(total / pagination.limit),
     };
   }
+  
   async createInitialSuperAdmin(input: {
     email: string;
     firstName?: string;

@@ -11,7 +11,7 @@ export class UserAccountService {
 
   async authenticationProfile(id: string) {
     const user = await this.users.findById(id);
-    return user ? { id: user.id!, email: user.email } : null;
+    return user ? { id: user.id!, email: user.email,globalRole:user.globalRole,firstName:user.firstName,lastName:user.lastName } : null;
   }
 
   async requiresPasswordAuthentication(id: string): Promise<boolean> {
