@@ -14,7 +14,10 @@ describe('EventLogService', () => {
       payload: { status: 'suspended' },
     });
 
-    const result = await service.findByAggregate('user', 'user-1');
+    const result = await service.findByAggregate(
+      'user',
+      '33333333-3333-4333-8333-333333333333',
+    );
 
     expect(result).toEqual([eventLog]);
     expect(eventLog.name).toBe('user.status.updated');

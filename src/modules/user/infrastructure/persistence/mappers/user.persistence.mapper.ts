@@ -44,7 +44,14 @@ export class UserPersistenceMapper {
     toResponse(output: ListUsersOutput | UpdateUserStatusOutput): ListUsersResponse | UpdateUserStatusResponse {
         if ('user' in output) {
             return {
-                user: output.user,
+                user: {
+                    id: output.user.id,
+                    firstName: output.user.firstName,
+                    lastName: output.user.lastName,
+                    email: output.user.email,
+                    status: output.user.status,
+                    globalRole: output.user.globalRole,
+                },
             };
         }
 
@@ -55,6 +62,7 @@ export class UserPersistenceMapper {
                 lastName: user.lastName,
                 email: user.email,
                 status: user.status,
+                globalRole: user.globalRole,
             })), 
             total: output.total,
             page: output.page,

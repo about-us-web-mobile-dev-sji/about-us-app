@@ -1,5 +1,5 @@
-import { User } from '../../../domain/entities/user.entity.js';
+import type { UserResponse } from './list-users.response.js';
 
-export interface UpdateUserStatusResponse{
-    user: User
+export interface UpdateUserStatusResponse {
+    user: UserResponse;
 }

@@ -1,4 +1,5 @@
 import type UserStatus from '../../../domain/enum/user-status.enum.js';
+import type { GlobalRole } from '../../../domain/enum/global-role.enum.js';
 
 export interface UserResponse {
   id: string | undefined;
@@ -6,6 +7,7 @@ export interface UserResponse {
   lastName: string | null;
   email: string;
   status: UserStatus;
+  globalRole: GlobalRole;
 }
 
 export interface ListUsersResponse {
