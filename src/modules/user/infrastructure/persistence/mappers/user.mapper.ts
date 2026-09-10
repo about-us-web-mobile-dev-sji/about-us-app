@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { User } from '../../../domain/entities/user.entity.js';
 import { UserId } from '../../../domain/value-objects/user-id.js';
-import { UserEntity } from '../typeorm/user.entity.js';
+import { UserEntity } from '../entity/user.entity.js';
 export class UserMapper {
   static toDomain(row: UserEntity): User {
     return User.reconstitute({

@@ -46,7 +46,7 @@ export class OpaqueRefreshTokenGateway implements RefreshTokenGateway {
       tokenUse: 'refresh' as const,
       jti: this.hash(raw),
       sid: session.id,
-      sub: session.subjectId,
+      sub: session.userId,
       iss: this.issuer,
       iat: Math.floor(session.createdAt / 1000),
       exp: Math.floor(session.expiresAt / 1000),

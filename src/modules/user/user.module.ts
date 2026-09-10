@@ -2,14 +2,14 @@ import { DatabaseModule } from '../../shared/infrastructure/database/database.mo
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { APP_FILTER } from '@nestjs/core';
-import { UserExceptionFilter } from './infrastructure/http/user-exception.filter.js';
-import { TypeormUserRepository } from './infrastructure/persistence/typeorm-user.repository.js';
+import { UserExceptionFilter } from './infrastructure/config/user-exception.filter.js';
+import { TypeormUserRepository } from './infrastructure/persistence/repositories/typeorm-user.repository.js';
 import {
   SUPER_ADMIN_EVENTS,
   type SuperAdminEventsGateway,
 } from './application/gateway/super-admin-events.gateway.js';
 import { NestSuperAdminEventsGateway } from './infrastructure/events/nest-super-admin-events.gateway.js';
-import { UserEntity } from './infrastructure/persistence/typeorm/user.entity.js';
+import { UserEntity } from './infrastructure/persistence/entity/user.entity.js';
 import {
   EventEmitterReadinessWatcher,
   EventEmitter2,
@@ -21,9 +21,11 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from './domain/repositories/i-user.repository.js';
-// PUserRepository removed: replaced by TypeORM-backed repository
 import { CreateSuperAdminUseCase } from './application/use-cases/commands/create-super-admin/CreateSuperAdmin.js';
 import { SuperAdminInitializer } from './infrastructure/startup/super-admin-initializer.js';
+import { UserController } from './infrastructure/api/controllers/user.controller.js';
+import { ListUsers } from './application/use-cases/queries/list-users/list-users.js';
+import { UpdateUserStatus } from './application/use-cases/commands/update-user-status/update-user-status.js';
 
 @Module({
   imports: [
@@ -31,9 +33,12 @@ import { SuperAdminInitializer } from './infrastructure/startup/super-admin-init
     DatabaseModule,
     TypeOrmModule.forFeature([UserEntity]),
   ],
+  controllers: [UserController],
   exports: [UserAccountService],
   providers: [
     { provide: APP_FILTER, useClass: UserExceptionFilter },
+    ListUsers,
+    UpdateUserStatus,
     {
       provide: SUPER_ADMIN_EVENTS,
       useFactory: (emitter: EventEmitter2) =>

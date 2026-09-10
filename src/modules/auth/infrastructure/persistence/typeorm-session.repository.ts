@@ -23,7 +23,7 @@ export class TypeormSessionRepository implements SessionRepository {
   }
 
   async findBySubjectId(subjectId: string) {
-    const rows = await this.repo.find({ where: { subjectId } });
+    const rows = await this.repo.find({ where: { userId: subjectId } });
     return rows.map((r) => this.read(r)!).filter(Boolean);
   }
 
