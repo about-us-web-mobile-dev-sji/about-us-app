@@ -27,7 +27,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('AppController (e2e)', () => {
     vi.stubEnv('GOOGLE_CLIENT_SECRET', 'test-secret');
     vi.stubEnv(
       'GOOGLE_CALLBACK_URL',
-      'http://localhost:3000/auth/google/callback',
+      'http://localhost:3000/auth/web/google/callback',
     );
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],

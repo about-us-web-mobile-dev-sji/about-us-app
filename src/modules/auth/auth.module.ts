@@ -16,8 +16,8 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import googleConfig from '../../config/google.config.js';
 import authConfig from '../../config/auth.config.js';
-import { UserModule } from '../user-off/user.module.js';
-import { UserAccountService } from '../user-off/application/user-account.service.js';
+import { UserModule } from '../user/user.module.js';
+import { UserAccountService } from '../user/application/user-account.service.js';
 import { GoogleLoginUseCase } from './application/use-cases/commands/google-login/GoogleLogin.js';
 import { RefreshTokenUseCase } from './application/use-cases/commands/refresh-token/RefreshToken.js';
 import { AuthenticateUseCase } from './application/use-cases/queries/authenticate/Authenticate.js';
@@ -50,14 +50,17 @@ import {
 } from './domain/repositories/session.repositories.js';
 // sqlite adapters removed — using TypeORM-backed repositories
 import { UserAuthSubjectGateway } from './infrastructure/services/user-auth-subject.gateway.js';
-import {
-  NestJwtService,
-  NestRefreshJwtService,
-} from './infrastructure/services/jwt.services.js';
+import { NestJwtService } from './infrastructure/services/jwt.services.js';
+import { OpaqueRefreshTokenGateway } from './infrastructure/services/opaque-refresh-token.gateway.js';
+import { GoogleTokenVerifier } from './infrastructure/services/google-token-verifier.js';
+import { GOOGLE_TOKEN_VERIFIER } from './application/gateways/i-google-token-verifier.gateway.js';
+import { WebAuthController } from './infrastructure/http/web-auth.controller.js';
+import { MobileAuthController } from './infrastructure/http/mobile-auth.controller.js';
 import { BCryptPasswordEncryptionGateway } from './infrastructure/services/bcrypt-password-encryption.gateway.js';
 import { GoogleStrategy } from './infrastructure/services/google.strategy.js';
 import { GoogleAuthGuard } from './infrastructure/services/google-auth-guard.services.js';
 import { AuthController } from './infrastructure/http/auth.controller.js';
+import { AuthGuard } from './infrastructure/http/auth.guard.js';
 
 @Module({
   imports: [
@@ -85,8 +88,9 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
       },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, WebAuthController, MobileAuthController],
   exports: [
+    AuthGuard,
     EmailLoginUseCase,
     GoogleLoginUseCase,
     RefreshTokenUseCase,
@@ -94,6 +98,16 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
     LogoutUseCase,
   ],
   providers: [
+    { provide: GOOGLE_TOKEN_VERIFIER, useExisting: GoogleTokenVerifier },
+    AuthGuard,
+    {
+      provide: GoogleTokenVerifier,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        new GoogleTokenVerifier(
+          config.getOrThrow<string[]>('google.audiences'),
+        ),
+    },
     {
       provide: CreateSuperAdminIdentityUseCase,
       inject: [AUTH_IDENTITY_REPOSITORY, PASSWORD_ENCRYPTION],
@@ -170,8 +184,15 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
     },
     {
       provide: REFRESH_TOKEN_SERVICE,
-      useFactory: (jwt: JwtService) => new NestRefreshJwtService(jwt),
-      inject: [JwtService],
+      useFactory: (
+        repo: Repository<AuthSessionEntity>,
+        config: ConfigService,
+      ) =>
+        new OpaqueRefreshTokenGateway(
+          repo,
+          config.getOrThrow<string>('auth.issuer'),
+        ),
+      inject: [getRepositoryToken(AuthSessionEntity), ConfigService],
     },
     { provide: PASSWORD_ENCRYPTION, useClass: BCryptPasswordEncryptionGateway },
     {
@@ -231,28 +252,40 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
         SessionValidator,
         SESSION_REPOSITORY,
         AccessTokenIssuer,
+        AUTH_SUBJECT,
       ],
       useFactory: (
         refresh: RefreshTokenGateway,
         validator: SessionValidator,
         sessions: SessionRepository,
         issuer: AccessTokenIssuer,
-      ) => new RefreshTokenUseCase(refresh, validator, sessions, issuer),
+        subjects: AuthSubjectGateway,
+      ) =>
+        new RefreshTokenUseCase(refresh, validator, sessions, issuer, subjects),
     },
     {
       provide: AuthenticateUseCase,
-      inject: [ACCESS_TOKEN_SERVICE, SessionValidator],
-      useFactory: (access: AccessTokenGateway, validator: SessionValidator) =>
-        new AuthenticateUseCase(access, validator),
+      inject: [ACCESS_TOKEN_SERVICE, SessionValidator, AUTH_SUBJECT],
+      useFactory: (
+        access: AccessTokenGateway,
+        validator: SessionValidator,
+        subjects: AuthSubjectGateway,
+      ) => new AuthenticateUseCase(access, validator, subjects),
     },
     {
       provide: LogoutUseCase,
-      inject: [ACCESS_TOKEN_SERVICE, SessionValidator, SESSION_REPOSITORY],
+      inject: [
+        ACCESS_TOKEN_SERVICE,
+        SessionValidator,
+        SESSION_REPOSITORY,
+        REFRESH_TOKEN_SERVICE,
+      ],
       useFactory: (
         access: AccessTokenGateway,
         validator: SessionValidator,
         sessions: SessionRepository,
-      ) => new LogoutUseCase(access, validator, sessions),
+        refresh: RefreshTokenGateway,
+      ) => new LogoutUseCase(access, validator, sessions, refresh),
     },
   ],
 })

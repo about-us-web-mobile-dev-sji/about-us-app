@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
-import { UserEntity } from '../modules/user-off/infrastructure/persistence/typeorm/user.entity.js';
+import { UserEntity } from '../modules/user/infrastructure/persistence/typeorm/user.entity.js';
 import { AuthIdentityEntity } from '../modules/auth/infrastructure/persistence/typeorm/auth-identity.entity.js';
 import { AuthSessionEntity } from '../modules/auth/infrastructure/persistence/typeorm/auth-session.entity.js';
 /** TEST_DATABASE_URL must identify a test server with CREATE DATABASE permission.

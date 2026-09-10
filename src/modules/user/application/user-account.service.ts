@@ -6,6 +6,10 @@ import UserStatus from '../domain/enum/user-status.enum.js';
 
 export class UserAccountService {
   constructor(private readonly users: UserRepository) {}
+  async authenticationProfile(id: string) {
+    const user = await this.users.findById(id);
+    return user ? { id: user.id!, email: user.email } : null;
+  }
   async requiresPasswordAuthentication(id: string): Promise<boolean> {
     return (
       (await this.users.findById(id))?.globalRole === GlobalRole.SUPER_ADMIN

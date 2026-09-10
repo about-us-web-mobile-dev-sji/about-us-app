@@ -8,7 +8,7 @@ import {
   JoinColumn,
   Unique,
 } from 'typeorm';
-import { UserEntity } from '../../../../user-off/infrastructure/persistence/typeorm/user.entity.js';
+import { UserEntity } from '../../../../user/infrastructure/persistence/typeorm/user.entity.js';
 
 @Unique('uq_identity_provider_subject', ['provider', 'providerSubject'])
 @Unique('uq_identity_user_provider', ['subjectId', 'provider'])

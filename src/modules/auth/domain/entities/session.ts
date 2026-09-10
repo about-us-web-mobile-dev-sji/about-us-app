@@ -4,6 +4,7 @@ export interface SessionProps {
   id: string;
   subjectId: string;
   identityId: string;
+  clientType?: 'WEB' | 'MOBILE';
   status: SessionStatus;
   createdAt: Date;
   lastActivityAt: Date;
@@ -16,21 +17,18 @@ export interface SessionProps {
 
 export type CreateSessionInput = Pick<
   SessionProps,
-  'subjectId' | 'identityId' | 'userAgent'
+  'subjectId' | 'identityId' | 'userAgent' | 'clientType'
 > & {
   ttlSeconds: number;
 };
 
 export type NewSession = Omit<SessionProps, 'id'>;
 
-
 export class Session {
   /** État métier ; les changements doivent être explicitement sauvegardés. */
   private constructor(private readonly props: SessionProps) {}
 
-  static prepareCreation(
-    input: CreateSessionInput,
-  ): NewSession {
+  static prepareCreation(input: CreateSessionInput): NewSession {
     const now = new Date();
     if (!input.subjectId.trim() || !input.identityId.trim()) {
       throw new Error('Subject and identity are required');
@@ -48,6 +46,7 @@ export class Session {
     return {
       subjectId: input.subjectId,
       identityId: input.identityId,
+      clientType: input.clientType ?? 'WEB',
       ...(input.userAgent !== undefined ? { userAgent: input.userAgent } : {}),
       status: SessionStatus.ACTIVE,
       createdAt: new Date(now),
@@ -60,8 +59,12 @@ export class Session {
   static reconstitute(props: SessionProps): Session {
     return new Session(structuredClone(props));
   }
-  get id(): string {return this.props.id;}
-  get subjectId(): string {return this.props.subjectId; }
+  get id(): string {
+    return this.props.id;
+  }
+  get subjectId(): string {
+    return this.props.subjectId;
+  }
 
   isActive(): boolean {
     const now = new Date();
@@ -88,7 +91,7 @@ export class Session {
     this.props.revokedAt = new Date(now);
     this.props.revocationReason = reason?.trim() || 'No reason provided';
   }
-  
+
   toPrimitives(): SessionProps {
     return structuredClone(this.props);
   }

@@ -1,4 +1,7 @@
 export interface AuthSubjectGateway {
+  authenticationProfile(
+    id: string,
+  ): Promise<{ id: string; email: string } | null>;
   create(input: {
     email: string;
     firstName?: string;
