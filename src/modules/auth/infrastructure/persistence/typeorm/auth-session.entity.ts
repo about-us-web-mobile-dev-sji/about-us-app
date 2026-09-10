@@ -1,7 +1,7 @@
 import { SessionStatus } from '../../../domain/enums/session-status.enums.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { UserEntity } from '../../../../user-off/infrastructure/persistence/typeorm/user.entity.js';
+import { UserEntity } from '../../../../user/infrastructure/persistence/typeorm/user.entity.js';
 import { AuthIdentityEntity } from './auth-identity.entity.js';
 
 @Entity({ name: 'auth_sessions', schema: 'auth' })

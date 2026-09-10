@@ -1,7 +1,7 @@
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataSource } from 'typeorm';
 import { createTestDatabase } from '../../../../test/postgres-test-utils.js';
-import { User } from '../../../user-off/domain/entities/user.entity.js';
+import { User } from '../../../user/domain/entities/user.entity.js';
 import {
   PASSWORD_ENCRYPTION,
   type PasswordEncryptionGateway,
@@ -27,7 +27,7 @@ import { GoogleStrategy } from '../services/google.strategy.js';
 import {
   USER_REPOSITORY,
   type UserRepository,
-} from '../../../user-off/domain/repositories/i-user.repository.js';
+} from '../../../user/domain/repositories/i-user.repository.js';
 import {
   AUTH_IDENTITY_REPOSITORY,
   type AuthIdentityRepository,

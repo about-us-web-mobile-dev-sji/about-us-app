@@ -21,9 +21,12 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from './domain/repositories/i-user.repository.js';
-// PUserRepository removed: replaced by TypeORM-backed repository
 import { CreateSuperAdminUseCase } from './application/use-cases/commands/create-super-admin/CreateSuperAdmin.js';
 import { SuperAdminInitializer } from './infrastructure/startup/super-admin-initializer.js';
+import { UserController } from './infrastructure/api/controllers/user.controller.js';
+import { UserPersistenceMapper } from './infrastructure/persistence/mappers/user.persistence.mapper.js';
+import { ListUsers } from './application/use-cases/queries/list-users/list-users.js';
+import { UpdateUserStatus } from './application/use-cases/command/update-user-status.js';
 
 @Module({
   imports: [
@@ -31,9 +34,13 @@ import { SuperAdminInitializer } from './infrastructure/startup/super-admin-init
     DatabaseModule,
     TypeOrmModule.forFeature([UserEntity]),
   ],
+  controllers: [UserController],
   exports: [UserAccountService],
   providers: [
     { provide: APP_FILTER, useClass: UserExceptionFilter },
+    UserPersistenceMapper,
+    ListUsers,
+    UpdateUserStatus,
     {
       provide: SUPER_ADMIN_EVENTS,
       useFactory: (emitter: EventEmitter2) =>

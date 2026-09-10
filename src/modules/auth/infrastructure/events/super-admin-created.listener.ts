@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { UserAccountService } from '../../../user-off/application/user-account.service.js';
+import { UserAccountService } from '../../../user/application/user-account.service.js';
 import { ConfigService } from '@nestjs/config';
 import { CreateSuperAdminIdentityUseCase } from '../../application/use-cases/commands/create-super-admin-identity/CreateSuperAdminIdentity.js';
 
