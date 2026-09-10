@@ -31,7 +31,7 @@ export class TypeormAuthIdentityRepository implements AuthIdentityRepository {
     return this.read(entity);
   }
   async findBySubjectAndProvider(subjectId: string, provider: AuthProvider) {
-    const entity = await this.repo.findOne({ where: { subjectId, provider } });
+    const entity = await this.repo.findOne({ where: { userId: subjectId, provider } });
     return this.read(entity);
   }
 
@@ -59,7 +59,7 @@ export class TypeormAuthIdentityRepository implements AuthIdentityRepository {
       });
       if (!entity) {
         entity = await manager.findOne(AuthIdentityEntity, {
-          where: { provider: input.provider, subjectId: input.subjectId },
+          where: { provider: input.provider, userId: input.subjectId },
         });
       }
       const identity = this.read(entity ?? null);

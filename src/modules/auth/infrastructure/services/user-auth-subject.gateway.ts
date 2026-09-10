@@ -2,6 +2,9 @@ import type { AuthSubjectGateway } from '../../application/gateways/i-auth-subje
 import { UserAccountService } from '../../../user/application/user-account.service.js';
 export class UserAuthSubjectGateway implements AuthSubjectGateway {
   constructor(private readonly users: UserAccountService) {}
+  authenticationProfile(id: string) {
+    return this.users.authenticationProfile(id);
+  }
   async canAuthenticateWithGoogle(id: string) {
     return (
       (await this.users.canAuthenticate(id)) &&

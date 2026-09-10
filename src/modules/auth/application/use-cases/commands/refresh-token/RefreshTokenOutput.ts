@@ -1,5 +1,1 @@
-export interface RefreshTokenOutput {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-}
+export type { AuthenticationResult as RefreshTokenOutput } from '../../../models/authentication-result.js';

@@ -7,8 +7,7 @@ import type { RefreshTokenGateway } from '../../../gateways/i-refresh-token.gate
 import type { AuthIdentityRepository } from '../../../../domain/repositories/auth-identity.repositories.js';
 import type { SessionRepository } from '../../../../domain/repositories/session.repositories.js';
 import { AuthIdentity } from '../../../../domain/entities/auth-identity.js';
-import { Session } from '../../../../domain/entities/session.js';
-import { RefreshToken } from '../../../../domain/entities/refresh-token.js';
+import { SessionIssuer } from '../../../services/session-issuer.service.js';
 import { AuthProvider } from '../../../../domain/enums/auth-provider.enums.js';
 import type { AccessTokenIssuer } from '../../../services/access-token-issuer.service.js';
 
@@ -60,18 +59,17 @@ export class GoogleLoginUseCase {
       throw new AccountUnavailableException();
     identity.markAuthenticated();
     await this.identities.save(identity);
-    const session = await this.sessions.create(
-      Session.prepareCreation({
-        subjectId: identity.subjectId,
-        identityId: identity.id,
-        userAgent,
-        ttlSeconds: this.options.sessionTtlSeconds,
-      }),
-    );
-    const accessToken = await this.accessTokens.issue(session);
-    const refreshToken = await this.refreshTokens.sign(
-      RefreshToken.create(session, { issuer: this.options.issuer }),
-    );
-    return { ...accessToken, refreshToken };
+    return new SessionIssuer(
+      this.subjects,
+      this.sessions,
+      this.accessTokens,
+      this.refreshTokens,
+      this.options,
+    ).issue({
+      subjectId: identity.subjectId,
+      identityId: identity.id,
+      userAgent,
+      clientType: input.clientType,
+    });
   }
 }

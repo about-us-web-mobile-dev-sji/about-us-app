@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
 import { createTestDatabase } from '../../../../test/postgres-test-utils.js';
 import { TypeormUserRepository } from './typeorm-user.repository.js';
-import { UserEntity } from './typeorm/user.entity.js';
+import { UserEntity } from './entity/user.entity.js';
 import { User } from '../../domain/entities/user.entity.js';
 import { SuperAdminEmailConflictException } from '../../domain/exceptions/super-admin-email-conflict.exception.js';
 import { UserEmailAlreadyUsedException } from '../../domain/exceptions/user-email-already-used.exception.js';

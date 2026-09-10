@@ -1,4 +1,4 @@
-/** Profile obtained server-side by Passport after exchanging the OAuth code. */
+/** Trusted profile obtained from the server-side OAuth exchange or ID-token verifier. */
 export interface GoogleIdentity {
   sub: string;
   email: string;

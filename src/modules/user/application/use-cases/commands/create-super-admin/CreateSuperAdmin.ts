@@ -1,3 +1,4 @@
+import { UnpersistedUserException } from '../../../exceptions/unpersisted-user.exception.js';
 import type { CreateSuperAdminInput } from './CreateSuperAdminInput.js';
 import type { CreateSuperAdminOutput } from './CreateSuperAdminOutput.js';
 import type { UserRepository } from '../../../../domain/repositories/i-user.repository.js';
@@ -30,9 +31,7 @@ export class CreateSuperAdminUseCase {
       });
     }
     if (!user.id)
-      throw new Error(
-        'Super admin must be persisted before publishing its creation',
-      );
+      throw new UnpersistedUserException();
     // Redelivery also repairs an interrupted User → Auth bootstrap.
     await this.events.publish(new SuperAdminCreatedEvent(user.id, user.email));
   }
