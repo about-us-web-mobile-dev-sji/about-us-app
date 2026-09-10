@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test API Écoles</title>
+</head>
+<body>
+    <h2>Tester le blocage / déblocage d'une école</h2>
+    
+    <label for="schoolId">ID de l'école :</label>
+    <input type="text" id="schoolId" placeholder="ex: 123"><br><br>
+
+    <button onclick="changerStatut('block')">Bloquer l'école</button>
+    <button onclick="changerStatut('unblock')">Débloquer l'école</button>
+
+    <h3>Résultat :</h3>
+    <pre id="resultat">Aucun test effectué</pre>
+
+    <script>
+        async function changerStatut(action) {
+            const id = document.getElementById('schoolId').value;
+            if (!id) return alert('Veuillez entrer un ID');
+
+            try {
+                const response = await fetch(`http://localhost:3000/schools/${id}/${action}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                document.getElementById('resultat').innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('resultat').innerText = 'Erreur : ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
