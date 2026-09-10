@@ -1,6 +1,1 @@
-export interface EmailLoginOutput {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-  refreshToken: string;
-}
+export type { AuthenticationResult as EmailLoginOutput } from '../../../models/authentication-result.js';

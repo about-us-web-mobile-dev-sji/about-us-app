@@ -50,15 +50,5 @@ export class AccessToken {
       }),
     );
   }
-  toClaims() {
-    return {
-      tokenUse: 'access' as const,
-      jti: this.props.id,
-      sub: this.props.subjectId,
-      sid: this.props.sessionId,
-      iss: this.props.issuer,
-      iat: Math.floor(this.props.issuedAt.getTime() / 1000),
-      exp: Math.floor(this.props.expiresAt.getTime() / 1000),
-    };
-  }
+
 }

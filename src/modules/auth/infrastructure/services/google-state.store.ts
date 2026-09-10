@@ -14,7 +14,7 @@ export class GoogleStateStore {
   >();
   constructor(private readonly secure: boolean) {}
   private readonly cookie = 'google_oauth_state';
-  private readonly path = '/auth/google/callback';
+  private readonly path = '/auth/web/google/callback';
 
   store(
     req: Request,

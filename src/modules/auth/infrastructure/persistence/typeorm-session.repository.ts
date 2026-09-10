@@ -5,6 +5,7 @@ import { AuthSessionEntity } from './typeorm/auth-session.entity.js';
 import { Session, type NewSession } from '../../domain/entities/session.js';
 import { SessionRepository } from '../../domain/repositories/session.repositories.js';
 import { randomUUID } from 'node:crypto';
+import { SessionStatus } from '../../domain/enums/session-status.enums.js';
 
 export class TypeormSessionRepository implements SessionRepository {
   constructor(
@@ -22,7 +23,7 @@ export class TypeormSessionRepository implements SessionRepository {
   }
 
   async findBySubjectId(subjectId: string) {
-    const rows = await this.repo.find({ where: { subjectId } });
+    const rows = await this.repo.find({ where: { userId: subjectId } });
     return rows.map((r) => this.read(r)!).filter(Boolean);
   }
 
@@ -35,13 +36,21 @@ export class TypeormSessionRepository implements SessionRepository {
 
   async save(session: Session) {
     const v = session.toPrimitives();
-    await this.repo.update(v.id, {
-      status: v.status,
-      lastActivityAt: v.lastActivityAt.getTime(),
-      expiresAt: v.expiresAt.getTime(),
-      revokedAt: v.revokedAt?.getTime() ?? null,
-      revocationReason: v.revocationReason ?? null,
-    });
+    await this.repo.update(
+      {
+        id: v.id,
+        ...(v.status === SessionStatus.ACTIVE
+          ? { status: SessionStatus.ACTIVE }
+          : {}),
+      },
+      {
+        status: v.status,
+        lastActivityAt: v.lastActivityAt.getTime(),
+        expiresAt: v.expiresAt.getTime(),
+        revokedAt: v.revokedAt?.getTime() ?? null,
+        revocationReason: v.revocationReason ?? null,
+      },
+    );
     const saved = await this.findById(session.id);
     if (!saved) throw new Error('Session does not exist');
     return saved;

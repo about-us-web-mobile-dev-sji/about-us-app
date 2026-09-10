@@ -4,25 +4,18 @@ import {
   Entity,
   Column,
   PrimaryColumn,
-  ManyToOne,
-  JoinColumn,
   Unique,
 } from 'typeorm';
-import { UserEntity } from '../../../../user/infrastructure/persistence/typeorm/user.entity.js';
 
 @Unique('uq_identity_provider_subject', ['provider', 'providerSubject'])
-@Unique('uq_identity_user_provider', ['subjectId', 'provider'])
+@Unique('uq_identity_user_provider', ['userId', 'provider'])
 @Entity({ name: 'auth_identities', schema: 'auth' })
 export class AuthIdentityEntity {
   @PrimaryColumn('text')
   id!: string;
 
-  @Column('text')
-  subjectId!: string;
-
-  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'subjectId' })
-  user!: UserEntity;
+  @Column({ type: 'text', name: 'subjectId' })
+  userId!: string;
 
   @Column('text')
   provider!: AuthProvider;

@@ -7,7 +7,7 @@ export class AuthIdentityMapper {
   static toDomain(row: AuthIdentityEntity): AuthIdentity {
     return AuthIdentity.reconstitute({
       id: row.id,
-      subjectId: row.subjectId,
+      subjectId: row.userId,
       provider: row.provider,
       providerSubject: row.providerSubject,
       passwordHash: row.passwordHash,
@@ -22,7 +22,7 @@ export class AuthIdentityMapper {
   static toPersistence(value: NewAuthIdentity, id: string): AuthIdentityEntity {
     return Object.assign(new AuthIdentityEntity(), {
       id,
-      subjectId: value.subjectId,
+      userId: value.subjectId,
       provider: value.provider,
       providerSubject: value.providerSubject,
       passwordHash: value.passwordHash,

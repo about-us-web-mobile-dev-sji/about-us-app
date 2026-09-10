@@ -1,9 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { AccessTokenGateway } from '../../application/gateways/i-access-token.gateway.js';
-import type { RefreshTokenGateway } from '../../application/gateways/i-refresh-token.gateway.js';
 import type { AccessToken } from '../../domain/entities/access-token.js';
-import type { RefreshToken } from '../../domain/entities/refresh-token.js';
 
 async function verify<T extends 'access' | 'refresh'>(
   jwt: JwtService,
@@ -44,14 +42,5 @@ export class NestJwtService implements AccessTokenGateway {
   }
   verify(rawToken: string) {
     return verify(this.jwtService, rawToken, 'access');
-  }
-}
-export class NestRefreshJwtService implements RefreshTokenGateway {
-  constructor(private readonly jwtService: JwtService) {}
-  sign(token: RefreshToken) {
-    return this.jwtService.signAsync(token.toClaims());
-  }
-  verify(rawToken: string) {
-    return verify(this.jwtService, rawToken, 'refresh');
   }
 }

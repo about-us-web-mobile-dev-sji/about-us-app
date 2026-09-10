@@ -4,8 +4,9 @@ export class SessionMapper {
   static toDomain(row: AuthSessionEntity): Session {
     return Session.reconstitute({
       id: row.id,
-      subjectId: row.subjectId,
+      subjectId: row.userId,
       identityId: row.identityId,
+      clientType: row.clientType,
       status: row.status,
       createdAt: new Date(row.createdAt),
       lastActivityAt: new Date(row.lastActivityAt),
@@ -18,8 +19,9 @@ export class SessionMapper {
   static toPersistence(value: NewSession, id: string): AuthSessionEntity {
     return Object.assign(new AuthSessionEntity(), {
       id,
-      subjectId: value.subjectId,
+      userId: value.subjectId,
       identityId: value.identityId,
+      clientType: value.clientType ?? 'WEB',
       status: value.status,
       createdAt: value.createdAt.getTime(),
       lastActivityAt: value.lastActivityAt.getTime(),
