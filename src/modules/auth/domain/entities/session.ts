@@ -30,8 +30,8 @@ export class Session {
 
   static prepareCreation(
     input: CreateSessionInput,
-    now = new Date(),
   ): NewSession {
+    const now = new Date();
     if (!input.subjectId.trim() || !input.identityId.trim()) {
       throw new Error('Subject and identity are required');
     }
@@ -63,27 +63,30 @@ export class Session {
   get id(): string {return this.props.id;}
   get subjectId(): string {return this.props.subjectId; }
 
-  isActive(now = new Date()): boolean {
+  isActive(): boolean {
+    const now = new Date();
     return (
       this.props.status === SessionStatus.ACTIVE && this.props.expiresAt > now
     );
   }
 
-  touch(now = new Date()): void {
-    if (!this.isActive(now) || now < this.props.lastActivityAt) {
+  touch(): void {
+    const now = new Date();
+    if (!this.isActive() || now < this.props.lastActivityAt) {
       throw new Error('Session is inactive or activity date is invalid');
     }
     this.props.lastActivityAt = new Date(now);
   }
 
-  revoke(reason: string, now = new Date()): void {
+  revoke(reason?: string): void {
+    const now = new Date();
     if (this.props.status === SessionStatus.REVOKED) return;
     if (!Number.isFinite(now.getTime()) || now < this.props.lastActivityAt) {
       throw new Error('Revocation date cannot precede the last activity');
     }
     this.props.status = SessionStatus.REVOKED;
     this.props.revokedAt = new Date(now);
-    this.props.revocationReason = reason;
+    this.props.revocationReason = reason?.trim() || 'No reason provided';
   }
   
   toPrimitives(): SessionProps {

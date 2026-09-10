@@ -1,6 +1,6 @@
 enum UserStatus {
-    ACTIVE = "ACTIVE",
-    SUSPENDED = "SUSPENDED"
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
 }
 
 export default UserStatus;

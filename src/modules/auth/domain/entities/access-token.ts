@@ -10,10 +10,10 @@ export interface AccessTokenProps {
   issuer: string;
 }
 
-/** Claims de courte durée ; la signature et la vérification sont confiées à un adaptateur. */
 export class AccessToken {
-  /** État interne encapsulé de l’entité, initialisé à la création ou à la reconstitution. */
+
   private constructor(private readonly props: AccessTokenProps) {}
+
   static create(
     session: Session,
     input: Pick<AccessTokenProps, 'issuer'> & {
@@ -22,7 +22,7 @@ export class AccessToken {
     },
     now = new Date(),
   ): AccessToken {
-    if (!session.isActive(now)) throw new Error('Session is not active');
+    if (!session.isActive()) throw new Error('Session is not active');
     if (
       !Number.isInteger(input.ttlSeconds) ||
       input.ttlSeconds <= 0 ||

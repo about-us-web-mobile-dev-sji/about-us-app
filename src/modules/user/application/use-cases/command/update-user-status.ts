@@ -4,8 +4,6 @@ import { UpdateUserStatusInput } from "./update-user-status.input.js";
 import { UpdateUserStatusOutput } from "./update-user-status.output.js";
 import UserStatus from "../../../domain/enum/user-status.enum.js";
 
-const UPDATE_USER_STATUS_USECASE = Symbol('UPDATE_USER_STATUS_USECASE');
-
 @Injectable()
 export class UpdateUserStatus {
     constructor(

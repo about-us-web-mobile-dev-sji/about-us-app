@@ -1,4 +1,4 @@
-import { User } from "../../../domain/entities/user.enity.js";
+import { User } from '../../../domain/entities/user.entity.js';
 
 export interface UpdateUserStatusResponse{
     user: User
