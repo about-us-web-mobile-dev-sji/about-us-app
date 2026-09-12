@@ -1,37 +1,187 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Test API Écoles</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de Bord - Administration Écoles</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: #f4f7fe; color: #2b3674; padding: 30px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .header h1 { font-size: 24px; font-weight: 700; color: #1b2559; }
+    .header p { font-size: 14px; color: #a3b2c7; margin-top: 4px; }
+    .btn-add { background-color: #4318ff; color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn-add:hover { background-color: #3311cc; }
+    .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 14px 16px; font-size: 12px; color: #a3b2c7; text-transform: uppercase; border-bottom: 1px solid #e9edf7; }
+    td { padding: 16px; font-size: 14px; border-bottom: 1px solid #f4f7fe; vertical-align: middle; }
+    .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
+    .badge-active { background: #e6faf5; color: #05cd99; }
+    .badge-blocked { background: #fde8e8; color: #ee5d50; }
+    .btn-action { padding: 8px 14px; border-radius: 8px; border: none; font-weight: 600; font-size: 12px; cursor: pointer; }
+    .btn-block { background: #ffe5e5; color: #e31a1a; }
+    .btn-unblock { background: #e0f9f1; color: #01b574; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100; }
+    .modal-content { background: white; padding: 25px; border-radius: 16px; width: 450px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-cancel { background: #e9edf7; color: #2b3674; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: #2b3674; color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; display: none; }
+  </style>
 </head>
 <body>
-    <h2>Tester le blocage / déblocage d'une école</h2>
-    
-    <label for="schoolId">ID de l'école :</label>
-    <input type="text" id="schoolId" placeholder="ex: 123"><br><br>
 
-    <button onclick="changerStatut('block')">Bloquer l'école</button>
-    <button onclick="changerStatut('unblock')">Débloquer l'école</button>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Tableau de bord</h1>
+      <p>Module de contrôle des établissements (NestJS & PostgreSQL)</p>
+    </div>
+    <button class="btn-add" onclick="openModal()">+ Ajouter une école</button>
+  </div>
 
-    <h3>Résultat :</h3>
-    <pre id="resultat">Aucun test effectué</pre>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom de l'école</th>
+          <th>Ville / Pays</th>
+          <th>Email</th>
+          <th>Statut</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="schoolList"></tbody>
+    </table>
+  </div>
+</div>
 
-    <script>
-        async function changerStatut(action) {
-            const id = document.getElementById('schoolId').value;
-            if (!id) return alert('Veuillez entrer un ID');
+<div class="modal" id="addModal">
+  <div class="modal-content">
+    <h3 style="margin-bottom: 15px;">Créer un établissement</h3>
+    <form id="createSchoolForm" onsubmit="handleCreate(event)">
+      <div class="form-group"><label>Nom de l'école *</label><input type="text" id="name" required placeholder="Institut Saint-Jean"></div>
+      <div class="form-group"><label>Ville</label><input type="text" id="city" placeholder="Yaoundé"></div>
+      <div class="form-group"><label>Pays</label><input type="text" id="country" placeholder="Cameroun"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="email" placeholder="contact@stjean.cm"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal()">Annuler</button>
+        <button type="submit" class="btn-add">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-            try {
-                const response = await fetch(`http://localhost:3000/schools/${id}/${action}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
-                document.getElementById('resultat').innerText = JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('resultat').innerText = 'Erreur : ' + error.message;
-            }
-        }
-    </script>
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_URL = 'http://localhost:3000/schools';
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+  }
+
+  async function fetchSchools() {
+    try {
+      const res = await fetch(API_URL);
+      if (res.ok) {
+        const schools = await res.json();
+        renderTable(schools);
+      }
+    } catch (e) {
+      showToast("Erreur de connexion avec l'API NestJS");
+    }
+  }
+
+  function renderTable(schools) {
+    const tbody = document.getElementById('schoolList');
+    if (!schools.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Aucune école enregistrée.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = schools.map(s => {
+      const isBlocked = s.status === 'BLOCKED' || s.isBlocked;
+      return `
+        <tr>
+          <td><strong>${s.name}</strong></td>
+          <td>${s.city || 'N/A'}, ${s.country || 'N/A'}</td>
+          <td>${s.email || 'N/A'}</td>
+          <td><span class="badge ${isBlocked ? 'badge-blocked' : 'badge-active'}">${isBlocked ? 'BLOQUÉE' : 'ACTIVE'}</span></td>
+          <td>
+            <button class="btn-action ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleBlock('${s.id}')">
+              ${isBlocked ? 'Débloquer' : 'Bloquer'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function toggleBlock(id) {
+    try {
+      const res = await fetch(`${API_URL}/${id}/toggle-block`, { method: 'PATCH' });
+      if (res.ok) {
+        showToast("Statut mis à jour dans PostgreSQL !");
+        fetchSchools();
+      } else {
+        showToast("Échec de la mise à jour");
+      }
+    } catch (e) {
+      showToast("Erreur réseau");
+    }
+  }
+
+  async function handleCreate(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('name').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const country = document.getElementById('country').value.trim();
+    const email = document.getElementById('email').value.trim();
+
+    const payload = { name };
+    if (city) payload.city = city;
+    if (country) payload.country = country;
+    if (email) payload.email = email;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Établissement créé dans PostgreSQL !");
+        document.getElementById('createSchoolForm').reset();
+        closeModal();
+        fetchSchools();
+      } else {
+        console.error("Détails de l'erreur NestJS :", data);
+        const errorMsg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+        showToast(`Erreur : ${errorMsg || 'Échec de création'}`);
+      }
+    } catch (err) {
+      console.error("Erreur réseau :", err);
+      showToast("Erreur réseau lors de la création");
+    }
+  }
+
+  function openModal() { document.getElementById('addModal').style.display = 'flex'; }
+  function closeModal() { document.getElementById('addModal').style.display = 'none'; }
+
+  fetchSchools();
+</script>
+
 </body>
 </html>

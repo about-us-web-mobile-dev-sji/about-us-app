@@ -1,10 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import { SchoolStatus } from '../../../domain/enums/school-status.enum.js';
-
-export const millisecondsTransformer = {
-  to: (value: Date | null | undefined) => (value ? value.getTime() : null),
-  from: (value: number | null) => (value !== null ? new Date(value) : null),
-};
+import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
 
 @Entity({ schema: 'school', name: 'schools' })
 export class SchoolEntity {

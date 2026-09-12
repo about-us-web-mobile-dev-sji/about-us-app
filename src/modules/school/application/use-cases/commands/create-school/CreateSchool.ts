@@ -1,3 +1,5 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InvitationSentEvent } from '../../../../../event/invitation-sent.event.js';
 import type { CreateSchoolInput } from './CreateSchoolInput.js';
 import type { CreateSchoolOutput } from './CreateSchoolOutput.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
@@ -6,10 +8,12 @@ import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
 
 export class CreateSchoolUseCase {
-  constructor(private readonly schools: SchoolRepository) {}
+  constructor(
+    private readonly schools: SchoolRepository,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async handle(input: CreateSchoolInput): Promise<CreateSchoolOutput> {
-    // Validate required fields
     if (!input.name?.trim()) {
       throw new InvalidSchoolException('School name is required');
     }
@@ -18,13 +22,11 @@ export class CreateSchoolUseCase {
       throw new InvalidSchoolException('createdBy is required');
     }
 
-    // Check if school name already exists
     const existingSchool = await this.schools.findByName(input.name.trim());
     if (existingSchool) {
       throw new SchoolNameAlreadyExistsException();
     }
 
-    // Create school entity
     const school = School.create({
       name: input.name,
       address: input.address,
@@ -38,12 +40,23 @@ export class CreateSchoolUseCase {
       createdBy: input.createdBy,
     });
 
-    // Persist school
     const savedSchool = await this.schools.save(school);
     const primitives = savedSchool.toPrimitives();
 
+    if (primitives.email) {
+      this.eventEmitter.emit(
+        'invitation.sent',
+        new InvitationSentEvent(
+          primitives.email,
+          primitives.id,
+          primitives.name,
+          new Date(),
+        ),
+      );
+    }
+
     return {
-      id: primitives.id,
+      id: primitives.id as `${string}-${string}-${string}-${string}-${string}`,
       name: primitives.name,
       address: primitives.address,
       city: primitives.city,

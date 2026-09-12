@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test d'envoi d'invitation</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 420px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; box-sizing: border-box; }
+        button { background-color: #4318ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #3311cc; }
+        #result { margin-top: 15px; font-weight: bold; white-space: pre-line; }
+    </style>
+</head>
+<body>
+
+    <h3>Test d'invitation : envoi puis acceptation</h3>
+    <p style="font-size: 13px; color: #666;">
+        Scénario GitHub : <strong>A</strong> envoie une invitation à <strong>B</strong> (événement
+        <code>invitation.sent</code>), puis B l'accepte (événement <code>invitation.accepted</code>).
+        Le listener informe alors A. Tout est journalisé dans la console NestJS + EventLogService.
+    </p>
+
+    <h4>1. Envoi (A invite B)</h4>
+
+    <label for="name">Nom de l'école (unique, auto-généré à chaque envoi) :</label>
+    <input type="text" id="name" value="École Saint-Jean">
+
+    <label for="email">Email de B (destinataire de l'invitation) :</label>
+    <input type="email" id="email" value="admin@stjean.cm">
+
+    <button onclick="sendInvitation()">A envoie l'invitation à B</button>
+
+    <h4>2. Acceptation (B accepte)</h4>
+
+    <label for="schoolId">ID de l'école (rempli à la création) :</label>
+    <input type="text" id="schoolId" placeholder="uuid de l'école">
+
+    <label for="adminUserId">ID du compte de B (celui qui accepte) :</label>
+    <input type="text" id="adminUserId" value="22222222-2222-4222-8222-222222222222">
+
+    <button onclick="acceptInvitation()" style="background-color:#1a8a4f;">B accepte l'invitation</button>
+
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/schools';
+
+        function uniqueName(base) {
+            const suffix = Date.now().toString(36).slice(-6);
+            return base + ' ' + suffix;
+        }
+
+        async function sendInvitation() {
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const resultDiv = document.getElementById('result');
+
+            const name = uniqueName(nameInput.value.trim() || 'École Saint-Jean');
+            nameInput.value = name;
+            const email = emailInput.value.trim();
+
+            resultDiv.style.color = 'black';
+            resultDiv.innerText = 'Envoi de l\'invitation...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('schoolId').value = data.id || '';
+                    resultDiv.style.color = 'green';
+                    resultDiv.innerText =
+                        'Invitation envoyée à ' + email + '\n' +
+                        'École " ' + name + ' " créée (id : ' + (data.id || '?') + ')\n' +
+                        'Événement invitation.sent émis -> regarde la console NestJS et le journal d\'événements.';
+                } else {
+                    resultDiv.style.color = 'red';
+                    resultDiv.innerText = 'Erreur : ' + (data.message || response.statusText);
+                }
+            } catch (error) {
+                resultDiv.style.color = 'red';
+                resultDiv.innerText = 'Erreur réseau : ' + error.message;
+            }
+        }
+
+        async function acceptInvitation() {
+            const schoolId = document.getElementById('schoolId').value.trim();
+            const adminUserId = document.getElementById('adminUserId').value.trim();
+            const resultDiv = document.getElementById('result');
+
+            if (!schoolId) {
+                resultDiv.style.color = 'red';
+                resultDiv.innerText = 'Envoie d\'abord une invitation (l\'id de l\'école sera rempli).';
+                return;
+            }
+
+            resultDiv.style.color = 'black';
+            resultDiv.innerText = 'Acceptation en cours...';
+
+            try {
+                const response = await fetch(API_URL + '/' + schoolId + '/accept', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adminUserId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.style.color = 'green';
+                    resultDiv.innerText =
+                        'B a accepté l\'invitation pour l\'école "' + data.name + '" (id : ' + data.id + ')\n' +
+                        'Événement invitation.accepted émis -> A est informé (console NestJS + journal d\'événements).';
+                } else {
+                    resultDiv.style.color = 'red';
+                    resultDiv.innerText = 'Erreur : ' + (data.message || response.statusText);
+                }
+            } catch (error) {
+                resultDiv.style.color = 'red';
+                resultDiv.innerText = 'Erreur réseau : ' + error.message;
+            }
+        }
+    </script>
+
+</body>
+</html>

@@ -92,6 +92,18 @@ export class School {
     this.props.updatedAt = new Date();
   }
 
+  // [AJOUT] Méthode pour bloquer l'école
+  block(): void {
+    this.props.status = SchoolStatus.BLOCKED; 
+    this.props.updatedAt = new Date();
+  }
+
+  // [AJOUT] Méthode pour débloquer l'école
+  unblock(): void {
+    this.props.status = SchoolStatus.ACTIVE;
+    this.props.updatedAt = new Date();
+  }
+
   assignAdmin(adminUserId: string): void {
     if (!adminUserId?.trim()) {
       throw new Error('Admin user ID is required');

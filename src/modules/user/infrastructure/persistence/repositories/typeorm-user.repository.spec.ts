@@ -1,16 +1,16 @@
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
-import { createTestDatabase } from '../../../../test/postgres-test-utils.js';
+import { createTestDatabase } from '../../../../../test/postgres-test-utils.js';
 import { TypeormUserRepository } from './typeorm-user.repository.js';
-import { UserEntity } from './entity/user.entity.js';
-import { User } from '../../domain/entities/user.entity.js';
-import { SuperAdminEmailConflictException } from '../../domain/exceptions/super-admin-email-conflict.exception.js';
-import { UserEmailAlreadyUsedException } from '../../domain/exceptions/user-email-already-used.exception.js';
-import { TypeormAuthIdentityRepository } from '../../../auth/infrastructure/persistence/typeorm-auth-identity.repository.js';
-import { AuthIdentityEntity } from '../../../auth/infrastructure/persistence/typeorm/auth-identity.entity.js';
-import { AuthSessionEntity } from '../../../auth/infrastructure/persistence/typeorm/auth-session.entity.js';
-import { AuthIdentity } from '../../../auth/domain/entities/auth-identity.js';
-import { AuthProvider } from '../../../auth/domain/enums/auth-provider.enums.js';
+import { UserEntity } from '../entity/user.entity.js';
+import { User } from '../../../domain/entities/user.entity.js';
+import { SuperAdminEmailConflictException } from '../../../domain/exceptions/super-admin-email-conflict.exception.js';
+import { UserEmailAlreadyUsedException } from '../../../domain/exceptions/user-email-already-used.exception.js';
+import { TypeormAuthIdentityRepository } from '../../../../auth/infrastructure/persistence/typeorm-auth-identity.repository.js';
+import { AuthIdentityEntity } from '../../../../auth/infrastructure/persistence/typeorm/auth-identity.entity.js';
+import { AuthSessionEntity } from '../../../../auth/infrastructure/persistence/typeorm/auth-session.entity.js';
+import { AuthIdentity } from '../../../../auth/domain/entities/auth-identity.js';
+import { AuthProvider } from '../../../../auth/domain/enums/auth-provider.enums.js';
 describe.skipIf(!process.env.TEST_DATABASE_URL)(
   'TypeormUserRepository PostgreSQL',
   () => {
