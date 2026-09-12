@@ -26,11 +26,12 @@ import databaseConfig from '../../../config/data-base.config.js';
         } as DataSourceOptions);
         try {
           await dataSource.initialize();
-          // Create module schemas before synchronizing development entities.
+          
           if (options.synchronize) {
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS auth');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS "user"');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS event');
+            await dataSource.query('CREATE SCHEMA IF NOT EXISTS school');
             await dataSource.synchronize();
           }
           return dataSource;

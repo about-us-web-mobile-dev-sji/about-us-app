@@ -1,3 +1,5 @@
 export interface LogoutInput {
-  accessToken: string;
+  accessToken?: string;
+  refreshToken?: string;
+  clientType?: 'WEB' | 'MOBILE';
 }

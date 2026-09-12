@@ -1,161 +1,122 @@
-# Authentification Google et email/mot de passe
+# Authentification Web et Mobile
 
-> Les use cases suivent désormais [la structure commands/queries](../../../docs/use-case-structure.md), avec des fichiers Input et Output séparés. Les sections historiques sur SQLite ci-dessous sont obsolètes ; la configuration actuelle est décrite dans [les changements User/Auth](../../../docs/user-module-changes.md).
+Les identites EMAIL et GOOGLE utilisent les memes use cases et le meme
+`SessionIssuer`. Les use cases retournent un `AuthenticationResult` contenant
+`user: { id, email }`, `sessionId`, `accessToken`, `refreshToken`,
+`tokenType` et `expiresIn`. Ils ne manipulent ni cookies ni objets HTTP.
 
-## Configuration et lancement
+## Configuration
 
-Le backend utilise le flux OAuth par redirection de `passport-google-oauth20`.
-Renseigner ces variables dans `.env` (voir aussi `.env.example`) :
+Voir [.env.example](../../../.env.example). Exemple local :
 
 ```dotenv
-GOOGLE_CLIENT_ID=identifiant-du-client-web-google
-GOOGLE_CLIENT_SECRET=secret-du-client-google
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
-JWT_SECRET=
+AUTH_WEB_ORIGIN=http://localhost:4200
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/web/google/callback
+GOOGLE_CLIENT_ID=<client OAuth Web>
+GOOGLE_CLIENT_SECRET=<secret OAuth Web>
+GOOGLE_ALLOWED_AUDIENCES=<audiences ID token autorisees, separees par des virgules>
+JWT_SECRET=<au moins 32 octets>
 JWT_ISSUER=about-us
-DATABASE_PATH=./data/about-us.sqlite
 ```
 
-Générer une valeur pour `JWT_SECRET` avec `openssl rand -hex 32` et la placer dans
-`.env`. La configuration exige au moins 32 octets et ne contient pas de secret
-par défaut. Ne pas committer les secrets.
+Une liste d'audiences vide utilise `GOOGLE_CLIENT_ID`. Configurer le SDK mobile
+pour demander un ID token destine a une audience autorisee par le backend.
+Enregistrer exactement la callback dans Google Cloud. Aucun secret client Google
+ne doit etre embarque dans l'application mobile.
 
-Dans Google Cloud, créer un client OAuth de type application Web, configurer
-l'écran de consentement et les utilisateurs de test si l'application est en mode
-test. Enregistrer exactement `GOOGLE_CALLBACK_URL` comme URI de redirection
-autorisée. Démarrer avec `npm run start:dev`, puis ouvrir
-`http://localhost:3000/auth/google` dans le navigateur.
+`AUTH_WEB_ORIGIN` configure CORS avec credentials, la verification CSRF et la
+redirection Google vers `<origine>/auth/callback`. Le frontend utilise
+`withCredentials: true` (Angular) ou `credentials: 'include'` (fetch).
+Les POST Web exigent le header navigateur `Origin` correspondant ; une origine
+absente ou differente est refusee. Les navigations Google utilisent le `state`
+OAuth a usage unique lie au navigateur.
 
-## Parcours
+En production : HTTPS et `NODE_ENV=production`. Les cookies sont HttpOnly,
+SameSite=Lax et Secure en production. Le frontend et l'API doivent etre sur le
+meme site pour cette politique SameSite (des sous-domaines conviennent).
+L'access cookie utilise `/`, le refresh cookie `/auth/web` afin d'etre disponible
+pour le renouvellement et la deconnexion. Le callback ne contient aucun token.
 
-1. `GET /auth/google` redirige vers Google avec les scopes `openid`, `email` et
-   `profile`. Un `state` aléatoire valable cinq minutes est lié au navigateur par
-   un cookie HttpOnly, SameSite=Lax et Secure en production.
-2. Google renvoie un code à `GET /auth/google/callback`. Passport vérifie le
-   `state` à usage unique, échange le code côté serveur et charge le profil Google.
-   Les tokens Google ne sont ni conservés ni retournés au client.
-3. `GoogleStrategy.validate()` exige un email vérifié. `profile.id` est le `sub`
-   Google, pas un ID token JWT : il n'est pas envoyé à `verifyIdToken()`.
-   Le modèle `application/models/google-identity.ts` représente ce profil obtenu
-   du serveur Google. L'ancien gateway de vérification d'ID token a été retiré,
-   car il correspondait à un autre mode de connexion.
-4. `GoogleLoginUseCase` retrouve l'identité avec `(GOOGLE, sub)`. À la première
-   connexion, il crée le compte via `AuthSubjectGateway` puis l'identité Google.
-   Un email déjà utilisé produit HTTP 409 : aucun rattachement implicite au compte
-   existant. Une connexion suivante retrouve le compte par `sub`, même si son
-   email Google change. Un compte absent ou suspendu est refusé.
-5. Le service sauvegarde la date de connexion et une nouvelle session de sept
-   jours. Les entités calculent les claims ; les adaptateurs Nest signent les JWT
-   avec HS256. L'access token dure au plus quinze minutes, sans dépasser la session.
+## Routes
 
-Le callback répond en JSON, avec `Cache-Control: no-store` :
-
-```json
-{
-  "accessToken": "<jwt de l'application>",
-  "tokenType": "Bearer",
-  "expiresIn": 900,
-  "refreshToken": "<jwt de renouvellement de l'application>"
-}
-```
-
-Ce backend ne comporte pas de frontend : après le consentement, le navigateur
-voit cette réponse JSON. Il n'y a pas de redirection vers une page frontend ni de
-token ajouté à une URL. L'intégration d'une interface navigateur devra définir
-son propre mécanisme de remise et de conservation des tokens.
-
-## Routes de session
-
-| Route | Entrée | Résultat |
+| Route | Entree | Reponse |
 | --- | --- | --- |
-| `GET /auth/me` | `Authorization: Bearer <accessToken>` | `subjectId` et `sessionId` |
-| `POST /auth/refresh` | JSON `{ "refreshToken": "..." }` | Nouvel access token, type et durée |
-| `POST /auth/logout` | `Authorization: Bearer <accessToken>` | HTTP 204 ; session révoquée |
+| POST /auth/web/login/email | JSON email/password, Origin | Cookies + user/sessionId |
+| GET /auth/web/login/google | Navigation navigateur | Redirection Google |
+| GET /auth/web/google/callback | Code et state Google | Cookies + redirection frontend |
+| POST /auth/web/refresh | Cookie refresh_token, Origin | Cookies renouveles + user/sessionId |
+| POST /auth/web/logout | Cookie refresh_token ou access_token, Origin | 204, cookies supprimes |
+| POST /auth/mobile/login/email | JSON email/password | AuthenticationResult |
+| POST /auth/mobile/login/google | JSON idToken | AuthenticationResult |
+| POST /auth/mobile/refresh | JSON refreshToken | AuthenticationResult |
+| POST /auth/mobile/logout | JSON refreshToken ou Bearer access token | 204 |
+| GET /auth/me | Cookie access_token ou Bearer | user, subjectId, sessionId |
 
-Les adaptateurs JWT vérifient signature, algorithme, émetteur, expiration,
-structure des claims et `tokenUse`. Le service vérifie ensuite la session,
-sa correspondance avec `sub`, l'identité associée et le statut du compte User.
-La révocation invalide les access tokens encore valables et le refresh token de
-cette session ; elle ne ferme pas les autres sessions de l'utilisateur.
+Le type WEB/MOBILE vient du controleur, jamais du corps fourni par le client.
+Le renouvellement et la deconnexion verifient le type de session. Les anciennes
+routes /auth/login, /auth/google, /auth/refresh et /auth/logout sont remplacees.
 
-Un refresh token reste réutilisable jusqu'à la fin de sa session. Il n'y a pas
-de rotation à usage unique, de hash de token ou d'historique de tokens stocké.
-Un renouvellement ne prolonge pas les sept jours. Pour protéger de nouvelles
-routes métier, appeler `AuthenticateUseCase.handle()` depuis leur guard ;
-l'export de ce use case ne protège pas automatiquement tous les contrôleurs.
+Sur mobile, conserver de preference l'access token en memoire et le refresh token
+dans un stockage securise reposant sur Keychain/Keystore. Remplacer la paire apres
+chaque renouvellement. Serialiser les renouvellements cote client : un token
+consomme ne peut pas etre reutilise, meme apres une reponse reseau perdue.
 
-## Structure et stockage
+## Identites et sessions
 
-- `application/use-cases` contient les opérations indépendantes, chacune exposant
-  `handle()` : `GoogleLoginUseCase`, `RefreshTokenUseCase`, `AuthenticateUseCase`,
-  `LogoutUseCase`, `EmailLoginUseCase` et `CreateSuperAdminIdentityUseCase`. Le contrôleur appelle directement le use case de sa route.
-- `application/services` mutualise la validation des sessions (`SessionValidator`)
-  et l'émission d'access tokens (`AccessTokenIssuer`). Les use cases ne s'appellent
-  pas entre eux et reçoivent uniquement les dépendances nécessaires.
-- `AuthModule` enregistre les use cases et exporte ceux de connexion et de session ; les services partagés
-  restent internes. La file de création des comptes reste propre à `GoogleLoginUseCase`.
-- `application/gateways` contient les contrats et tokens d'injection.
-- `infrastructure/services` contient Passport, les adaptateurs JWT, bcrypt et
-  l'adaptateur vers le service public `UserAccountService`.
-- `infrastructure/http` expose les routes.
-- `infrastructure/persistence` contient les repositories SQLite utilisés par Auth.
-  Les adaptateurs en mémoire restent disponibles pour les tests unitaires.
+Google Web utilise Passport, l'echange de code serveur et le profil Google
+verifie. Google Mobile utilise `google-auth-library` pour verifier la signature,
+l'audience, l'emetteur et l'expiration de l'ID token, puis exige un email verifie.
+Voir la [documentation Google](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
 
-La dépendance est Auth → User ; User ne dépend pas d'Auth. Les entités Auth
-ne dépendent pas des entités User. Le gateway bcrypt est enregistré dans Auth,
-et utilisé pour créer l’identité du super-admin et vérifier la connexion email.
-Le démarrage du super-admin publie un événement User dont le traitement Auth est attendu.
+L'identite Google est retrouvee par `sub`, jamais par l'email seul.
+Plusieurs identites peuvent referencer le meme User. Le rattachement automatique
+a un compte de meme email reste interdit (409) ; aucun endpoint de liaison de
+comptes n'est ajoute. Le super-admin conserve son authentification par mot de passe.
 
-**Les comptes, identités et sessions sont persistés dans SQLite**, au chemin
-`DATABASE_PATH` (par défaut `./data/about-us.sqlite`). `DatabaseModule`, dans
-`shared/infrastructure/database`, partage une connexion entre User et Auth et la
-ferme à l'arrêt. Node 24 ou supérieur est requis pour `node:sqlite`.
-Le schéma est initialisé automatiquement, avec unicité des emails, des identités
-par fournisseur/sujet et des références entre compte, identité et session.
-Les fichiers de base et journaux sont ignorés par Git. La base est créée avec
-les permissions 0600 ; les nouveaux répertoires utilisent 0700.
+Les access tokens sont des JWT HS256 de quinze minutes maximum. Les sessions
+durent sept jours, sans prolongation lors du refresh. Les refresh tokens sont
+opaques (32 octets aleatoires), et seul leur SHA-256 est persiste dans PostgreSQL.
+La rotation utilise une mise a jour conditionnelle atomique : une seule requete
+concurrente peut remplacer le hash courant. Un rejeu est refuse avec HTTP 401.
+La revocation de session invalide tous ses tokens, sans fermer les autres sessions.
+Une sauvegarde obsolete ne peut pas reactiver une session revoquee.
 
-Les transactions de bootstrap utilisent `BEGIN IMMEDIATE` et une attente de verrou
-limitée à dix secondes. La garantie de concurrence concerne les processus utilisant
-le **même fichier SQLite sur le même hôte**. Des bases séparées ne partagent pas cette
-garantie. En conteneur, monter un volume persistant ; pour plusieurs hôtes, utiliser
-un service de base de données partagé et les adaptateurs correspondants.
-Les mécanismes utilisés sont documentés dans [Node SQLite](https://nodejs.org/api/sqlite.html)
-et [les transactions SQLite](https://www.sqlite.org/lang_transaction.html).
+`AuthGuard`, exporte par AuthModule, protege les routes avec
+`@UseGuards(AuthGuard)`. Il verifie la session, l'identite et le compte, puis
+place le resultat dans `request.auth`. Pour les futures mutations utilisant des
+cookies, appliquer aussi la verification d'origine de `auth-transport.ts` :
+le guard d'authentification ne remplace pas la protection CSRF.
 
-Le repository Session empêche une sauvegarde obsolète de réactiver une session
-révoquée ; ses dates d'expiration ne sont pas recalculées lors des sauvegardes.
-Les transactions OAuth `state` restent en mémoire : elles expirent au redémarrage
-et nécessitent que l'entrée Google et son callback atteignent le même processus.
-Aucune donnée des anciens repositories en mémoire ne peut être migrée après leur
-arrêt ; les données de démonstration ne sont plus insérées automatiquement.
+Le state OAuth reste en memoire : l'entree Google et sa callback doivent atteindre
+le meme processus (affinite de session). Un redemarrage annule les flux en cours.
 
-En production, utiliser HTTPS et `NODE_ENV=production` pour le cookie OAuth Secure.
-La callback doit rester sur le même hôte que le point d'entrée de connexion.
+## Migration PostgreSQL
 
-## Vérifications
+En developpement, `DATABASE_SYNCHRONIZE=true` ajoute les colonnes TypeORM.
+En production, appliquer [la migration SQL](../../../docs/migrations/20260909-auth-transports.sql)
+avec le processus habituel de deploiement, avant de lancer cette version.
+Elle ajoute le hash de refresh et le type de client, puis revoque les anciennes
+sessions sans hash. Une reconnexion est donc necessaire ; les anciens refresh JWT
+ne sont plus acceptes. Aucune migration n'est lancee automatiquement en production.
 
-`npm test` couvre les entités et un parcours HTTP complet avec les appels Google
-simulés : redirection, callback, reconnexion, renouvellement, déconnexion, comptes
-suspendus, email existant, email non vérifié, mauvais tokens et protection state.
-`npm run test:e2e` vérifie le démarrage d'AppModule et sa route d'accueil.
-`npx tsc --noEmit` vérifie aussi les signatures TypeScript des tests.
+## Verification
 
-La connexion réelle nécessite un client OAuth Google configuré et un consentement
-interactif ; elle n'est pas effectuée par les tests automatisés.
+```sh
+npm run build
+npm run lint
+npm test
+TEST_DATABASE_URL=postgresql://... npm test
+TEST_DATABASE_URL=postgresql://... npm run test:e2e
+npx tsc --noEmit --incremental false
+```
 
-## Erreurs applicatives et HTTP
-
-La couche Application ne dépend pas de NestJS. Elle lève `InvalidSessionException`,
-`AccountUnavailableException`, `InvalidGoogleIdentityException` ou
-`InvalidCredentialsException`, définies dans
-`domain/exceptions` et dérivées de `Error`, sans statut HTTP.
-
-`AuthApplicationExceptionFilter`, dans `infrastructure/http`, traduit uniquement ces
-exceptions en HTTP 401 avec le format `{ statusCode, message, error }`.
-Le filtre est enregistré via `APP_FILTER` dans AuthModule : il s'applique aussi
-aux routes d'autres modules utilisant les use cases exportés. Les erreurs HTTP
-existantes et les erreurs inattendues restent traitées par Nest normalement.
+Les tests PostgreSQL creent et suppriment leurs propres bases temporaires sur un
+serveur de test disposant du droit CREATE DATABASE. Sans TEST_DATABASE_URL,
+ils sont ignores. Les tests couvrent cookies, CSRF, connexions email/Google,
+rotation concurrente, rejeu, revocation et restrictions de compte.
+Les tests du verificateur Google utilisent de vrais JWT RSA avec des cles de test ;
+seul le telechargement des certificats est simule. Le consentement Google reel
+necessite une verification interactive avec le client OAuth configure.
 
 ## Super-admin : événement User → Auth
 
@@ -197,31 +158,3 @@ Le rôle global `SUPER_ADMIN` est stocké sur User. La restriction à l'authenti
 par mot de passe dépend de ce rôle et non de l'email configuré. Les connexions Google
 et les anciennes sessions Google sont refusées pour ce rôle. Changer la configuration
 ne renomme pas le compte et ne crée pas de second Super-Admin.
-
-### Connexion email/mot de passe
-
-```http
-POST /auth/login
-Content-Type: application/json
-
-{"email":"admin@example.com","password":"<mot de passe configuré>"}
-```
-
-`EmailLoginUseCase` recherche exclusivement une identité EMAIL, compare le mot de
-passe au hash et refuse un compte suspendu. Il crée une session et renvoie les mêmes
-champs que Google : `accessToken`, `refreshToken`, `tokenType`, `expiresIn`, avec
-`Cache-Control: no-store`. Les routes `/auth/me`, `/auth/refresh` et `/auth/logout`
-fonctionnent aussi pour ces sessions. Un mauvais email ou mot de passe produit
-la même réponse HTTP 401 ; le hash n'est jamais inclus dans la réponse.
-
-Modifier `SUPER_ADMIN_PASSWORD` ne réinitialise pas une identité déjà enregistrée.
-Les redémarrages conservent le hash en base. Un changement de mot de passe devra
-passer par un flux explicite dédié, distinct du bootstrap.
-
-## SYS 1.0
-
-Les tests `test/sys10-persistence.spec.ts` couvrent les redémarrages sur un fichier
-conservé, la configuration modifiée ou absente, le rôle, le hash bcrypt, les sessions
-persistées, la reprise après un échec et quatre processus concurrents. L'audit de
-création est volontairement exclu de cette livraison ; les logs existants de
-bootstrap ne constituent pas un audit.

@@ -7,8 +7,7 @@ import type { AuthSubjectGateway } from '../../../gateways/i-auth-subject.gatewa
 import type { RefreshTokenGateway } from '../../../gateways/i-refresh-token.gateway.js';
 import type { AccessTokenIssuer } from '../../../services/access-token-issuer.service.js';
 import { AuthProvider } from '../../../../domain/enums/auth-provider.enums.js';
-import { Session } from '../../../../domain/entities/session.js';
-import { RefreshToken } from '../../../../domain/entities/refresh-token.js';
+import { SessionIssuer } from '../../../services/session-issuer.service.js';
 import { InvalidCredentialsException } from '../../../../domain/exceptions/invalid-credentials.exception.js';
 
 export class EmailLoginUseCase {
@@ -43,18 +42,17 @@ export class EmailLoginUseCase {
     }
     identity.markAuthenticated();
     await this.identities.save(identity);
-    const session = await this.sessions.create(
-      Session.prepareCreation({
-        subjectId: identity.subjectId,
-        identityId: identity.id,
-        userAgent: input.userAgent,
-        ttlSeconds: this.options.sessionTtlSeconds,
-      }),
-    );
-    const access = await this.accessTokens.issue(session);
-    const refreshToken = await this.refreshTokens.sign(
-      RefreshToken.create(session, { issuer: this.options.issuer }),
-    );
-    return { ...access, refreshToken };
+    return new SessionIssuer(
+      this.subjects,
+      this.sessions,
+      this.accessTokens,
+      this.refreshTokens,
+      this.options,
+    ).issue({
+      subjectId: identity.subjectId,
+      identityId: identity.id,
+      userAgent: input.userAgent,
+      clientType: input.clientType,
+    });
   }
 }

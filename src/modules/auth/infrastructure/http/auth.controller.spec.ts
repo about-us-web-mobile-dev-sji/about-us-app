@@ -22,8 +22,13 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
+import cookieParser from 'cookie-parser';
 import { AuthModule } from '../../auth.module.js';
 import { GoogleStrategy } from '../services/google.strategy.js';
+import { GoogleTokenVerifier } from '../services/google-token-verifier.js';
+import { AuthSessionEntity } from '../persistence/typeorm/auth-session.entity.js';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   USER_REPOSITORY,
   type UserRepository,
@@ -52,7 +57,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
       vi.stubEnv('GOOGLE_CLIENT_SECRET', 'test-secret');
       vi.stubEnv(
         'GOOGLE_CALLBACK_URL',
-        'http://localhost:3000/auth/google/callback',
+        'http://localhost:3000/auth/web/google/callback',
       );
       const module = await Test.createTestingModule({
         imports: [
@@ -95,6 +100,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
       );
       strategy.userProfile = profile;
       app = module.createNestApplication();
+      app.use(cookieParser());
       await app.init();
       await app
         .get<UserRepository>(USER_REPOSITORY)
@@ -110,21 +116,32 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
 
     async function login() {
       const browser = request.agent(app.getHttpServer());
-      const start = await browser.get('/auth/google').expect(302);
+      const start = await browser.get('/auth/web/login/google').expect(302);
       const url = new URL(start.headers.location);
       expect(url.hostname).toBe('accounts.google.com');
       expect(url.searchParams.get('client_id')).toBe('test-client');
       expect(url.searchParams.get('scope')).toContain('email');
       const state = url.searchParams.get('state')!;
       const response = await browser
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({ code: 'test-code', state })
-        .expect(200);
+        .expect(302);
+      expect(response.body).toEqual({});
+      const cookies = response.headers['set-cookie'] as unknown as string[];
+      response.body = Object.fromEntries(
+        cookies.map((cookie) => {
+          const [name, value] = cookie.split(';')[0].split('=');
+          return [
+            name === 'access_token' ? 'accessToken' : 'refreshToken',
+            value,
+          ];
+        }),
+      );
       return { browser, state, response };
     }
 
     it('logs in, reuses the identity, refreshes and revokes the entire session', async () => {
-      const { response } = await login();
+      const { response, browser } = await login();
       expect(response.headers['cache-control']).toBe('no-store');
       const { accessToken, refreshToken } = response.body;
       expect(refreshToken).toEqual(expect.any(String));
@@ -139,20 +156,27 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         .expect(200);
       expect(second.body.subjectId).toBe(me.body.subjectId);
       expect(second.body.sessionId).not.toBe(me.body.sessionId);
-      const refreshed = await request(app.getHttpServer())
-        .post('/auth/refresh')
-        .send({ refreshToken })
+      const refreshed = await browser
+        .post('/auth/web/refresh')
+        .set('Origin', 'http://localhost:4200')
         .expect(200);
-      await request(app.getHttpServer())
-        .post('/auth/logout')
-        .auth(accessToken, { type: 'bearer' })
+      expect(refreshed.body.accessToken).toBeUndefined();
+      const freshAccess = (
+        refreshed.headers['set-cookie'] as unknown as string[]
+      )
+        .find((cookie) => cookie.startsWith('access_token='))!
+        .split(';')[0]
+        .slice('access_token='.length);
+      await browser
+        .post('/auth/web/logout')
+        .set('Origin', 'http://localhost:4200')
         .expect(204);
       await request(app.getHttpServer())
         .get('/auth/me')
-        .auth(refreshed.body.accessToken, { type: 'bearer' })
+        .auth(freshAccess, { type: 'bearer' })
         .expect(401);
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({ refreshToken })
         .expect(401);
       await request(app.getHttpServer())
@@ -161,23 +185,193 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         .expect(200);
     });
 
-    it('rejects missing, forged, cross-browser and reused OAuth state before contacting Google', async () => {
+    it('uses HttpOnly cookies for email, rejects CSRF and logs out after access expiry', async () => {
+      const browser = request.agent(app.getHttpServer());
+      const credentials = {
+        email: 'admin@example.com',
+        password: 'Test-admin-password-2026!',
+        clientType: 'MOBILE',
+      };
+      await browser.post('/auth/web/login/email').send(credentials).expect(403);
+      await browser
+        .post('/auth/web/login/email')
+        .set('Origin', 'https://attacker.example')
+        .send(credentials)
+        .expect(403);
+      const response = await browser
+        .post('/auth/web/login/email')
+        .set('Origin', 'http://localhost:4200')
+        .send(credentials)
+        .expect(200);
+      expect(response.body.user.email).toBe('admin@example.com');
+      expect(response.body.accessToken).toBeUndefined();
+      expect(response.body.refreshToken).toBeUndefined();
+      const cookies = response.headers['set-cookie'] as unknown as string[];
+      expect(cookies).toHaveLength(2);
+      for (const cookie of cookies) {
+        expect(cookie).toContain('HttpOnly');
+        expect(cookie).toContain('SameSite=Lax');
+      }
+      const raw = cookies
+        .find((cookie) => cookie.startsWith('refresh_token='))!
+        .split(';')[0]
+        .slice('refresh_token='.length);
+      const session = await database.source
+        .getRepository(AuthSessionEntity)
+        .findOneByOrFail({ id: response.body.sessionId });
+      expect(session.clientType).toBe('WEB');
+      expect(session.refreshTokenHash).toBe(
+        createHash('sha256').update(raw).digest('hex'),
+      );
+      await browser.get('/auth/me').expect(200);
+      await browser.post('/auth/web/refresh').expect(403);
       await request(app.getHttpServer())
-        .get('/auth/google/callback?code=x')
+        .post('/auth/mobile/refresh')
+        .send({ refreshToken: raw })
         .expect(401);
       await request(app.getHttpServer())
-        .get('/auth/google/callback?code=x&state=forged')
+        .post('/auth/web/refresh')
+        .set('Origin', 'http://localhost:4200')
+        .send({ refreshToken: raw })
+        .expect(401);
+      // Keep only the refresh cookie, as happens after access-token expiry.
+      const logout = await request(app.getHttpServer())
+        .post('/auth/web/logout')
+        .set('Origin', 'http://localhost:4200')
+        .set('Cookie', 'refresh_token=' + raw)
+        .expect(204);
+      expect(logout.headers['set-cookie']).toHaveLength(2);
+      await browser.get('/auth/me').expect(401);
+    });
+
+    it('rotates mobile refresh tokens atomically and revokes with the replacement', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/mobile/login/email')
+        .send({
+          email: 'admin@example.com',
+          password: 'Test-admin-password-2026!',
+          clientType: 'WEB',
+        })
+        .expect(200);
+      expect(response.headers['set-cookie']).toBeUndefined();
+      expect(response.body.user.email).toBe('admin@example.com');
+      const session = await database.source
+        .getRepository(AuthSessionEntity)
+        .findOneByOrFail({ id: response.body.sessionId });
+      expect(session.clientType).toBe('MOBILE');
+      const results = await Promise.all(
+        [0, 1].map(() =>
+          request(app.getHttpServer())
+            .post('/auth/mobile/refresh')
+            .send({ refreshToken: response.body.refreshToken }),
+        ),
+      );
+      expect(results.map((result) => result.status).sort()).toEqual([200, 401]);
+      const replacement = results.find((result) => result.status === 200)!.body;
+      expect(replacement.refreshToken).not.toBe(response.body.refreshToken);
+      await request(app.getHttpServer())
+        .post('/auth/mobile/refresh')
+        .send({ refreshToken: response.body.refreshToken })
+        .expect(401);
+      await request(app.getHttpServer())
+        .post('/auth/mobile/logout')
+        .send({ refreshToken: replacement.refreshToken })
+        .expect(204);
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .auth(replacement.accessToken, { type: 'bearer' })
+        .expect(401);
+      await request(app.getHttpServer())
+        .post('/auth/mobile/refresh')
+        .send({ refreshToken: replacement.refreshToken })
+        .expect(401);
+    });
+
+    it('migrates legacy sessions without changing users and can run twice', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/mobile/login/email')
+        .send({
+          email: 'admin@example.com',
+          password: 'Test-admin-password-2026!',
+        })
+        .expect(200);
+      await database.source.query(
+        'ALTER TABLE auth.auth_sessions DROP COLUMN "refreshTokenHash", DROP COLUMN "clientType"',
+      );
+      const migration = readFileSync(
+        new URL(
+          '../../../../../docs/migrations/20260909-auth-transports.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      );
+      await database.source.query(migration);
+      await database.source.query(migration);
+      const session = await database.source
+        .getRepository(AuthSessionEntity)
+        .findOneByOrFail({ id: response.body.sessionId });
+      expect(session.status).toBe('REVOKED');
+      expect(session.refreshTokenHash).toBeNull();
+      expect(
+        await app
+          .get<UserRepository>(USER_REPOSITORY)
+          .findByEmail('admin@example.com'),
+      ).not.toBeNull();
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .auth(response.body.accessToken, { type: 'bearer' })
+        .expect(401);
+      await request(app.getHttpServer())
+        .post('/auth/mobile/login/email')
+        .send({
+          email: 'admin@example.com',
+          password: 'Test-admin-password-2026!',
+        })
+        .expect(200);
+    });
+
+    it('verifies the Google mobile ID token before creating the common session', async () => {
+      const verifier = vi
+        .spyOn(app.get(GoogleTokenVerifier), 'verify')
+        .mockResolvedValue({
+          sub: 'mobile-google-sub',
+          email: 'mobile@example.com',
+          emailVerified: true,
+        });
+      const response = await request(app.getHttpServer())
+        .post('/auth/mobile/login/google')
+        .send({ idToken: 'google-id-token' })
+        .expect(200);
+      expect(verifier).toHaveBeenCalledWith('google-id-token');
+      expect(response.headers['set-cookie']).toBeUndefined();
+      expect(response.body.user.email).toBe('mobile@example.com');
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .auth(response.body.accessToken, { type: 'bearer' })
+        .expect(200);
+      await request(app.getHttpServer())
+        .post('/auth/mobile/login/google')
+        .send({ sub: 'forged', email: 'mobile@example.com' })
+        .expect(400);
+    });
+
+    it('rejects missing, forged, cross-browser and reused OAuth state before contacting Google', async () => {
+      await request(app.getHttpServer())
+        .get('/auth/web/google/callback?code=x')
+        .expect(401);
+      await request(app.getHttpServer())
+        .get('/auth/web/google/callback?code=x&state=forged')
         .expect(401);
       expect(exchange).not.toHaveBeenCalled();
       const { browser, state } = await login();
       exchange.mockClear();
       await browser
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({ code: 'x', state })
         .expect(401);
-      const start = await browser.get('/auth/google').expect(302);
+      const start = await browser.get('/auth/web/login/google').expect(302);
       await request(app.getHttpServer())
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({
           code: 'x',
           state: new URL(start.headers.location).searchParams.get('state'),
@@ -189,7 +383,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
     it('rejects invalid tokens and access/refresh token substitution', async () => {
       const { response } = await login();
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({ refreshToken: response.body.accessToken })
         .expect(401);
       await request(app.getHttpServer())
@@ -201,7 +395,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         .auth('invalid', { type: 'bearer' })
         .expect(401);
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({})
         .expect(400);
       const jwt = app.get(JwtService);
@@ -232,9 +426,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         }),
       );
       const browser = request.agent(app.getHttpServer());
-      const start = await browser.get('/auth/google').expect(302);
+      const start = await browser.get('/auth/web/login/google').expect(302);
       await browser
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({
           code: 'x',
           state: new URL(start.headers.location).searchParams.get('state'),
@@ -254,13 +448,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         .auth(response.body.accessToken, { type: 'bearer' })
         .expect(401);
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({ refreshToken: response.body.refreshToken })
         .expect(401);
       const browser = request.agent(app.getHttpServer());
-      const start = await browser.get('/auth/google').expect(302);
+      const start = await browser.get('/auth/web/login/google').expect(302);
       await browser
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({
           code: 'x',
           state: new URL(start.headers.location).searchParams.get('state'),
@@ -284,16 +478,16 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         }),
       );
       const browser = request.agent(app.getHttpServer());
-      const start = await browser.get('/auth/google').expect(302);
+      const start = await browser.get('/auth/web/login/google').expect(302);
       await browser
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({
           code: 'x',
           state: new URL(start.headers.location).searchParams.get('state'),
         })
         .expect(401);
       await browser
-        .get('/auth/google/callback?error=access_denied')
+        .get('/auth/web/google/callback?error=access_denied')
         .expect(401);
     });
     it.each([
@@ -347,7 +541,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
           .compare('Test-admin-password-2026!', hash),
       ).toBe(true);
       const loggedIn = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/auth/mobile/login/email')
         .send({
           email: ' ADMIN@EXAMPLE.COM ',
           password: 'Test-admin-password-2026!',
@@ -358,7 +552,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         'accessToken',
         'expiresIn',
         'refreshToken',
+        'sessionId',
         'tokenType',
+        'user',
       ]);
       const me = await request(app.getHttpServer())
         .get('/auth/me')
@@ -366,15 +562,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         .expect(200);
       expect(me.body.subjectId).toBe(admin.id);
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({ refreshToken: loggedIn.body.refreshToken })
         .expect(200);
       await request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/auth/mobile/logout')
         .auth(loggedIn.body.accessToken, { type: 'bearer' })
         .expect(204);
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({ refreshToken: loggedIn.body.refreshToken })
         .expect(401);
     });
@@ -382,13 +578,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
     it('rejects wrong credentials, malformed requests and suspended email accounts', async () => {
       for (const email of ['admin@example.com', 'unknown@example.com']) {
         const response = await request(app.getHttpServer())
-          .post('/auth/login')
+          .post('/auth/mobile/login/email')
           .send({ email, password: 'wrong-password' })
           .expect(401);
         expect(response.body.message).toBe('Invalid email or password');
       }
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/auth/mobile/login/email')
         .send({ email: 'admin@example.com', password: 123 })
         .expect(400);
       const users = app.get<UserRepository>(USER_REPOSITORY);
@@ -396,7 +592,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
       admin.block();
       await users.save(admin);
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/auth/mobile/login/email')
         .send({
           email: 'admin@example.com',
           password: 'Test-admin-password-2026!',
@@ -418,9 +614,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
           }),
         );
       const browser = request.agent(app.getHttpServer());
-      const start = await browser.get('/auth/google').expect(302);
+      const start = await browser.get('/auth/web/login/google').expect(302);
       await browser
-        .get('/auth/google/callback')
+        .get('/auth/web/google/callback')
         .query({
           code: 'x',
           state: new URL(start.headers.location).searchParams.get('state'),
@@ -448,7 +644,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         .auth(jwt.sign({ ...claims, tokenUse: 'access' }), { type: 'bearer' })
         .expect(401);
       await request(app.getHttpServer())
-        .post('/auth/refresh')
+        .post('/auth/mobile/refresh')
         .send({ refreshToken: jwt.sign({ ...claims, tokenUse: 'refresh' }) })
         .expect(401);
     });

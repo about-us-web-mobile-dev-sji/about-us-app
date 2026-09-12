@@ -8,6 +8,7 @@ export interface AccessTokenProps {
   issuedAt: Date;
   expiresAt: Date;
   issuer: string;
+
 }
 
 export class AccessToken {
@@ -52,6 +53,7 @@ export class AccessToken {
       }),
     );
   }
+
   toClaims() {
     return {
       tokenUse: 'access' as const,

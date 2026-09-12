@@ -54,29 +54,15 @@ export class User {
     return user;
   }
 
-  get globalRole(): GlobalRole {
-    return this.props.globalRole;
-  }
+  get globalRole(): GlobalRole {return this.props.globalRole;}
 
-  static reconstitute(props: Required<UserProps>): User {
-    return new User(structuredClone(props));
-  }
+  static reconstitute(props: Required<UserProps>): User {return new User(structuredClone(props));}
 
-  get id(): UUID | undefined {
-    return this.idValue?.value;
-  }
-  get firstName(): string | null {
-    return this.props.firstName;
-  }
-  get lastName(): string | null {
-    return this.props.lastName;
-  }
-  get email(): string {
-    return this.emailValue.value;
-  }
-  get status(): UserStatus {
-    return this.props.status;
-  }
+  get id(): UUID | undefined {return this.idValue?.value;}
+  get firstName(): string | null {return this.props.firstName;}
+  get lastName(): string | null {return this.props.lastName;}
+  get email(): string {return this.emailValue.value;}
+  get status(): UserStatus {return this.props.status;}
 
   block(): void {
     if (this.props.status === UserStatus.SUSPENDED) return;

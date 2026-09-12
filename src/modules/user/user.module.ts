@@ -2,14 +2,14 @@ import { DatabaseModule } from '../../shared/infrastructure/database/database.mo
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { APP_FILTER } from '@nestjs/core';
-import { UserExceptionFilter } from './infrastructure/http/user-exception.filter.js';
-import { TypeormUserRepository } from './infrastructure/persistence/typeorm-user.repository.js';
+import { UserExceptionFilter } from './infrastructure/config/user-exception.filter.js';
+import { TypeormUserRepository } from './infrastructure/persistence/repositories/typeorm-user.repository.js';
 import {
   SUPER_ADMIN_EVENTS,
   type SuperAdminEventsGateway,
 } from './application/gateway/super-admin-events.gateway.js';
 import { NestSuperAdminEventsGateway } from './infrastructure/events/nest-super-admin-events.gateway.js';
-import { UserEntity } from './infrastructure/persistence/typeorm/user.entity.js';
+import { UserEntity } from './infrastructure/persistence/entity/user.entity.js';
 import {
   EventEmitterReadinessWatcher,
   EventEmitter2,
@@ -24,14 +24,14 @@ import {
 import { CreateSuperAdminUseCase } from './application/use-cases/commands/create-super-admin/CreateSuperAdmin.js';
 import { SuperAdminInitializer } from './infrastructure/startup/super-admin-initializer.js';
 import { UserController } from './infrastructure/api/controllers/user.controller.js';
-import { UserPersistenceMapper } from './infrastructure/persistence/mappers/user.persistence.mapper.js';
 import { ListUsers } from './application/use-cases/queries/list-users/list-users.js';
-import { UpdateUserStatus } from './application/use-cases/command/update-user-status.js';
 import {
   USER_STATUS_EVENTS,
   type UserStatusEventsGateway,
 } from './application/gateway/user-status-events.gateway.js';
 import { NestUserStatusEventsGateway } from './infrastructure/events/nest-user-status-events.gateway.js';
+import { UpdateUserStatus } from './application/use-cases/commands/update-user-status/update-user-status.js';
+
 
 @Module({
   imports: [
@@ -43,7 +43,6 @@ import { NestUserStatusEventsGateway } from './infrastructure/events/nest-user-s
   exports: [UserAccountService],
   providers: [
     { provide: APP_FILTER, useClass: UserExceptionFilter },
-    UserPersistenceMapper,
     ListUsers,
     {
       provide: UpdateUserStatus,

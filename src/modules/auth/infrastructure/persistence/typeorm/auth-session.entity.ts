@@ -1,20 +1,20 @@
 import { SessionStatus } from '../../../domain/enums/session-status.enums.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { UserEntity } from '../../../../user/infrastructure/persistence/typeorm/user.entity.js';
 import { AuthIdentityEntity } from './auth-identity.entity.js';
 
 @Entity({ name: 'auth_sessions', schema: 'auth' })
 export class AuthSessionEntity {
+  @Column({ type: 'text', nullable: true, unique: true })
+  refreshTokenHash!: string | null;
+  @Column({ type: 'text', default: 'WEB' })
+  clientType!: 'WEB' | 'MOBILE';
+
   @PrimaryColumn('text')
   id!: string;
 
-  @Column('text')
-  subjectId!: string;
-
-  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'subjectId' })
-  user!: UserEntity;
+  @Column({ type: 'text', name: 'subjectId' })
+  userId!: string;
 
   @Column('text')
   identityId!: string;

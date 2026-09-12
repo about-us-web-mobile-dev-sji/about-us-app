@@ -1,17 +1,17 @@
 import { Repository, QueryFailedError } from 'typeorm';
-import { UserEntity } from './typeorm/user.entity.js';
-import { User } from '../../domain/entities/user.entity.js';
-import { GlobalRole } from '../../domain/enum/global-role.enum.js';
-import { Email } from '../../domain/value-objects/email.js';
+import { UserEntity } from './../entity/user.entity.js';
+import { User } from '../../../domain/entities/user.entity.js';
+import { GlobalRole } from '../../../domain/enum/global-role.enum.js';
+import { Email } from '../../../domain/value-objects/email.js';
 import type {
   PaginatedResult,
   PaginationParams,
   UserFilters,
   UserRepository,
-} from '../../domain/repositories/i-user.repository.js';
-import { SuperAdminEmailConflictException } from '../../domain/exceptions/super-admin-email-conflict.exception.js';
-import { UserEmailAlreadyUsedException } from '../../domain/exceptions/user-email-already-used.exception.js';
-import { UserMapper } from './mappers/user.mapper.js';
+} from '../../../domain/repositories/i-user.repository.js';
+import { SuperAdminEmailConflictException } from '../../../domain/exceptions/super-admin-email-conflict.exception.js';
+import { UserEmailAlreadyUsedException } from '../../../domain/exceptions/user-email-already-used.exception.js';
+import { UserMapper } from './../mappers/user.mapper.js';
 export class TypeormUserRepository implements UserRepository {
   constructor(private readonly repo: Repository<UserEntity>) {}
   private read(row: UserEntity | null) {
@@ -33,6 +33,7 @@ export class TypeormUserRepository implements UserRepository {
   async superAdminExists() {
     return (await this.findSuperAdmin()) !== null;
   }
+
   async getAll(
     filters: UserFilters,
     pagination: PaginationParams,
@@ -61,6 +62,7 @@ export class TypeormUserRepository implements UserRepository {
       totalPages: Math.ceil(total / pagination.limit),
     };
   }
+  
   async createInitialSuperAdmin(input: {
     email: string;
     firstName?: string;
@@ -89,7 +91,7 @@ export class TypeormUserRepository implements UserRepository {
         },
       );
     } catch (error) {
-      if (this.isUniqueConflict(error))
+      if (this.isEmailConflict(error))
         throw new SuperAdminEmailConflictException();
       throw error;
     }
@@ -100,16 +102,21 @@ export class TypeormUserRepository implements UserRepository {
         await this.repo.save(UserMapper.toPersistence(user)),
       );
     } catch (error) {
-      if (this.isUniqueConflict(error))
+      if (this.isEmailConflict(error))
         throw new UserEmailAlreadyUsedException();
       throw error;
     }
   }
-  private isUniqueConflict(error: unknown): boolean {
+  private isEmailConflict(error: unknown): boolean {
     return (
       error instanceof QueryFailedError &&
       'code' in error.driverError &&
-      error.driverError.code === '23505'
+      error.driverError.code === '23505' &&
+      this.repo.metadata.uniques.some((constraint) =>
+        constraint.name === error.driverError.constraint &&
+        constraint.columns.length === 1 &&
+        constraint.columns[0].propertyName === 'email'
+      )
     );
   }
 }

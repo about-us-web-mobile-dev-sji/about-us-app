@@ -31,7 +31,7 @@ Les endpoints existants gardent leurs routes et leurs champs de réponse :
 
 `AuthResponseMapper` sélectionne les propriétés publiques. La validation est explicite à l’exécution, sans dépendre de décorateurs qui nécessiteraient un ValidationPipe supplémentaire. Les champs additionnels des requêtes ne sont pas transmis aux use cases.
 
-`UserResponseDto` et `UserResponseMapper` fournissent une représentation publique du User persisté. User ne possédant actuellement aucun contrôleur, aucun nouvel endpoint public de création ou d’administration n’est ajouté. Le DTO User sera à brancher lors de l’introduction de telles routes et de leurs autorisations.
+Les routes du module User utilisent les requêtes et réponses définies dans `infrastructure/api`. Le dossier `infrastructure/http` contient le filtre de traduction des exceptions métier en réponses HTTP.
 
 ## Configuration de développement
 
