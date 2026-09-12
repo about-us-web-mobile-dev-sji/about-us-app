@@ -25,6 +25,8 @@ export type NewSession = Omit<SessionProps, 'id'>;
 
 
 export class Session {
+  static readonly ENTITY_TYPE = 'session';
+
   /** État métier ; les changements doivent être explicitement sauvegardés. */
   private constructor(private readonly props: SessionProps) {}
 

@@ -15,6 +15,8 @@ interface UserProps {
 }
 
 export class User {
+  static readonly ENTITY_TYPE = 'user';
+
   private readonly emailValue: Email;
   private readonly idValue?: UserId;
   private constructor(private props: UserProps) {

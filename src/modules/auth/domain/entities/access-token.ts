@@ -11,6 +11,8 @@ export interface AccessTokenProps {
 }
 
 export class AccessToken {
+  static readonly ENTITY_TYPE = 'access_token';
+
 
   private constructor(private readonly props: AccessTokenProps) {}
 

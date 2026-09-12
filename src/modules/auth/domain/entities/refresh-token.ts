@@ -11,6 +11,8 @@ export interface RefreshTokenProps {
 }
 
 export class RefreshToken {
+  static readonly ENTITY_TYPE = 'refresh_token';
+
   /** État immuable des claims à signer ; aucun secret ni hash stocké. */
   private constructor(private readonly props: RefreshTokenProps) {}
 
