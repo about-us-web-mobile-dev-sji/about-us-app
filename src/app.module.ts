@@ -1,52 +1,41 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
 import { createObserveModule } from '@nestjs/observe';
+
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { DatabaseModule } from './infrastructure/configuration/database/database.module.js';
-import { UserModule } from './user/user.module.js';
-import { AuthModule } from './auth/auth.module.js';
-import { AuditModule } from './audit/audit.module.js';
-import { SchoolModule } from './school/school.module.js';
-import { SchoolMembershipModule } from './school-membership/school-membership.module.js';
-import { JwtAuthGuard } from './auth/infrastructure/guards/JwtAuthGuard.js';
-import { RolesGuard } from './auth/infrastructure/guards/RolesGuard.js';
-import { DataSource } from 'typeorm';
+import superAdminConfig from './config/super-admin.config.js';
+import databaseConfig from './config/data-base.config.js';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
+import { AuthModule } from './modules/auth/auth.module.js';
+import { UserModule } from './modules/user/user.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [superAdminConfig, databaseConfig],
+    }),
+
+    DatabaseModule,
+
+    EventEmitterModule.forRoot(),
+
+    UserModule,
+    AuthModule,
+
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',
       appSecret: 'YOUR_APP_SECRET',
       serviceId: 'about-us',
     }),
-    DatabaseModule,
-    UserModule,
-    AuthModule,
-    AuditModule,
-    SchoolModule,
-    SchoolMembershipModule,
   ],
+
   controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
-    {
-      provide: 'DataSource',
-      useFactory: (dataSource: DataSource) => dataSource,
-      inject: [DataSource],
-    },
-  ],
+  providers: [AppService],
 })
 export class AppModule {}
