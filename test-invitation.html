@@ -21,6 +21,8 @@
         Le listener informe alors A. Tout est journalisé dans la console NestJS + EventLogService.
     </p>
 
+    <p id="authStatus" style="font-size: 13px; font-weight: bold;">Connexion en cours...</p>
+
     <h4>1. Envoi (A invite B)</h4>
 
     <label for="name">Nom de l'école (unique, auto-généré à chaque envoi) :</label>
@@ -45,6 +47,33 @@
 
     <script>
         const API_URL = 'http://localhost:3000/schools';
+        const AUTH_URL = 'http://localhost:3000/auth/mobile/login/email';
+        let accessToken = null;
+
+        async function login() {
+            const statusDiv = document.getElementById('authStatus');
+            try {
+                const response = await fetch(AUTH_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'admin@example.com', password: 'adminpassword' })
+                });
+                const data = await response.json();
+                if (response.ok && data.accessToken) {
+                    accessToken = data.accessToken;
+                    statusDiv.style.color = 'green';
+                    statusDiv.innerText = 'Connecté en tant que ' + data.user.email + ' (token OK) — la création d\'école est autorisée.';
+                    return true;
+                }
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = 'Échec de connexion : ' + (data.message || response.statusText);
+                return false;
+            } catch (error) {
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = 'Échec de connexion (serveur démarré ?) : ' + error.message;
+                return false;
+            }
+        }
 
         function uniqueName(base) {
             const suffix = Date.now().toString(36).slice(-6);
@@ -56,6 +85,13 @@
             const emailInput = document.getElementById('email');
             const resultDiv = document.getElementById('result');
 
+            if (!accessToken) await login();
+            if (!accessToken) {
+                resultDiv.style.color = 'red';
+                resultDiv.innerText = 'Impossible de se connecter : la création d\'école est bloquée sans token.';
+                return;
+            }
+
             const name = uniqueName(nameInput.value.trim() || 'École Saint-Jean');
             nameInput.value = name;
             const email = emailInput.value.trim();
@@ -66,7 +102,10 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + accessToken
+                    },
                     body: JSON.stringify({ name, email })
                 });
 
@@ -126,6 +165,8 @@
                 resultDiv.innerText = 'Erreur réseau : ' + error.message;
             }
         }
+
+        login();
     </script>
 
 </body>

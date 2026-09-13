@@ -41,6 +41,7 @@
     <div>
       <h1>Tableau de bord</h1>
       <p>Module de contrôle des établissements (NestJS & PostgreSQL)</p>
+      <p id="authStatus" style="font-size: 13px; font-weight: bold;">Connexion en cours...</p>
     </div>
     <button class="btn-add" onclick="openModal()">+ Ajouter une école</button>
   </div>
@@ -81,6 +82,33 @@
 
 <script>
   const API_URL = 'http://localhost:3000/schools';
+  const AUTH_URL = 'http://localhost:3000/auth/mobile/login/email';
+  let accessToken = null;
+
+  async function login() {
+    const statusDiv = document.getElementById('authStatus');
+    try {
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'admin@example.com', password: 'adminpassword' })
+      });
+      const data = await res.json();
+      if (res.ok && data.accessToken) {
+        accessToken = data.accessToken;
+        statusDiv.style.color = 'green';
+        statusDiv.innerText = 'Connecté en tant que ' + data.user.email;
+        return true;
+      }
+      statusDiv.style.color = 'red';
+      statusDiv.innerText = 'Échec de connexion : ' + (data.message || res.statusText);
+      return false;
+    } catch (e) {
+      statusDiv.style.color = 'red';
+      statusDiv.innerText = 'Échec de connexion (serveur démarré ?) : ' + e.message;
+      return false;
+    }
+  }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -147,6 +175,12 @@
     const country = document.getElementById('country').value.trim();
     const email = document.getElementById('email').value.trim();
 
+    if (!accessToken) await login();
+    if (!accessToken) {
+      showToast("Connexion impossible : la création exige un compte");
+      return;
+    }
+
     const payload = { name };
     if (city) payload.city = city;
     if (country) payload.country = country;
@@ -155,7 +189,10 @@
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + accessToken
+        },
         body: JSON.stringify(payload)
       });
 
@@ -180,6 +217,7 @@
   function openModal() { document.getElementById('addModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('addModal').style.display = 'none'; }
 
+  login();
   fetchSchools();
 </script>
 
