@@ -42,6 +42,7 @@ export class CreateSchoolUseCase {
 
     const savedSchool = await this.schools.save(school);
     const primitives = savedSchool.toPrimitives();
+    if (!primitives.id) throw new Error('Repository returned an unpersisted school');
 
     if (primitives.email) {
       this.eventEmitter.emit(

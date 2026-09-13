@@ -8,9 +8,12 @@ export interface AccessTokenProps {
   issuedAt: Date;
   expiresAt: Date;
   issuer: string;
+
 }
 
 export class AccessToken {
+  static readonly ENTITY_TYPE = 'access_token';
+
 
   private constructor(private readonly props: AccessTokenProps) {}
 
@@ -53,14 +56,13 @@ export class AccessToken {
 
   toClaims() {
     return {
-      sub: this.props.subjectId,
+      tokenUse: 'access' as const,
       jti: this.props.id,
+      sub: this.props.subjectId,
       sid: this.props.sessionId,
       iss: this.props.issuer,
       iat: Math.floor(this.props.issuedAt.getTime() / 1000),
       exp: Math.floor(this.props.expiresAt.getTime() / 1000),
-      tokenUse: 'access',
     };
   }
-
 }

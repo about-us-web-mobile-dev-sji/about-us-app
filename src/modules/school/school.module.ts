@@ -3,6 +3,7 @@ import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
+import { AuthModule } from '../auth/auth.module.js';
 import { SchoolEntity } from './infrastructure/persistence/typeorm/school.entity.js';
 import { TypeormSchoolRepository } from './infrastructure/persistence/typeorm-school.repository.js';
 import { CreateSchoolUseCase } from './application/use-cases/commands/create-school/CreateSchool.js';
@@ -17,6 +18,7 @@ import { SchoolExceptionFilter } from './infrastructure/http/school-exception.fi
   imports: [
     DatabaseModule,
     TypeOrmModule.forFeature([SchoolEntity]),
+    AuthModule,
   ],
   controllers: [SchoolController],
   providers: [

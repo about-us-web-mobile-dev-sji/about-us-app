@@ -4,6 +4,7 @@ import { School } from '../../domain/entities/school.entity.js';
 import type { SchoolRepository } from '../../domain/repositories/i-school.repository.js';
 import { SchoolMapper } from './mappers/school.mapper.js';
 import { SchoolNameAlreadyExistsException } from '../../domain/exceptions/school-name-already-exists.exception.js';
+import type { UUID } from 'node:crypto';
 
 export class TypeormSchoolRepository implements SchoolRepository {
   constructor(private readonly repo: Repository<SchoolEntity>) {}
@@ -12,7 +13,7 @@ export class TypeormSchoolRepository implements SchoolRepository {
     return entity ? SchoolMapper.toDomain(entity) : null;
   }
 
-  async findById(id: string): Promise<School | null> {
+  async findById(id: UUID): Promise<School | null> {
     const entity = await this.repo.findOneBy({ id });
     return this.read(entity);
   }

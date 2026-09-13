@@ -1,9 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Request, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Req,
+  Request,
+  Inject,
+  UseGuards,
+} from '@nestjs/common';
 import { CreateSchoolDto } from './dto/create-school.dto.js';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto.js';
 import { CreateSchoolUseCase } from '../../application/use-cases/commands/create-school/CreateSchool.js';
 import { ToggleSchoolStatus } from '../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from '../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
+import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructure/http/auth.guard.js';
 import type { SchoolRepository } from '../../domain/repositories/i-school.repository.js';
 import { SCHOOL_REPOSITORY } from '../../domain/repositories/i-school.repository.js';
 
@@ -24,9 +36,13 @@ export class SchoolController {
   }
 
   @Post()
-  async create(@Body() dto: CreateSchoolDto, @Request() req: any) {
-    // Utilise l'ID authentifié ou un identifiant système par défaut pour éviter le plantage 500
-    const userId = req.user?.sub || req.user?.id || dto.adminUserId || '00000000-0000-0000-0000-000000000000';
+  @UseGuards(AuthGuard)
+  async create(@Body() dto: CreateSchoolDto, @Req() req: AuthenticatedRequest) {
+    const userId = req.auth.subjectId;
+
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
 
     return await this.createSchool.handle({
       name: dto.name,

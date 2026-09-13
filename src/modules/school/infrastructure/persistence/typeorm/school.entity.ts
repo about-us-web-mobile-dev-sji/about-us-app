@@ -1,11 +1,12 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import { SchoolStatus } from '../../../domain/enums/school-status.enum.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
+import type { UUID } from 'node:crypto';
 
 @Entity({ schema: 'school', name: 'schools' })
 export class SchoolEntity {
   @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  id!: UUID;
 
   @Column({ type: 'varchar', length: 200, unique: true })
   name!: string;

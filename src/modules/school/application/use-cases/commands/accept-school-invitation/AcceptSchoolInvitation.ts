@@ -6,6 +6,7 @@ import { SchoolNotFoundException } from '../../../../domain/exceptions/school-no
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { AcceptSchoolInvitationInput } from './AcceptSchoolInvitationInput.js';
 import type { AcceptSchoolInvitationOutput } from './AcceptSchoolInvitationOutput.js';
+import type { UUID } from 'node:crypto';
 
 export class AcceptSchoolInvitation {
   constructor(
@@ -24,7 +25,7 @@ export class AcceptSchoolInvitation {
       throw new InvalidSchoolException('adminUserId is required');
     }
 
-    const school = await this.schools.findById(input.schoolId);
+    const school = await this.schools.findById(input.schoolId as UUID);
     if (!school) {
       throw new SchoolNotFoundException();
     }
@@ -48,7 +49,7 @@ export class AcceptSchoolInvitation {
       'invitation.accepted',
       new InvitationAcceptedEvent(
         savedPrimitives.createdBy,
-        savedPrimitives.id,
+        savedPrimitives.id as string,
         savedPrimitives.name,
         savedPrimitives.adminUserId as string,
         new Date(),

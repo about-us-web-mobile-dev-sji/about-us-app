@@ -25,7 +25,13 @@ import { CreateSuperAdminUseCase } from './application/use-cases/commands/create
 import { SuperAdminInitializer } from './infrastructure/startup/super-admin-initializer.js';
 import { UserController } from './infrastructure/api/controllers/user.controller.js';
 import { ListUsers } from './application/use-cases/queries/list-users/list-users.js';
+import {
+  USER_STATUS_EVENTS,
+  type UserStatusEventsGateway,
+} from './application/gateway/user-status-events.gateway.js';
+import { NestUserStatusEventsGateway } from './infrastructure/events/nest-user-status-events.gateway.js';
 import { UpdateUserStatus } from './application/use-cases/commands/update-user-status/update-user-status.js';
+
 
 @Module({
   imports: [
@@ -38,11 +44,24 @@ import { UpdateUserStatus } from './application/use-cases/commands/update-user-s
   providers: [
     { provide: APP_FILTER, useClass: UserExceptionFilter },
     ListUsers,
-    UpdateUserStatus,
+    {
+      provide: UpdateUserStatus,
+      useFactory: (
+        repository: UserRepository,
+        events: UserStatusEventsGateway,
+      ) => new UpdateUserStatus(repository, events),
+      inject: [USER_REPOSITORY, USER_STATUS_EVENTS],
+    },
     {
       provide: SUPER_ADMIN_EVENTS,
       useFactory: (emitter: EventEmitter2) =>
         new NestSuperAdminEventsGateway(emitter),
+      inject: [EventEmitter2],
+    },
+    {
+      provide: USER_STATUS_EVENTS,
+      useFactory: (emitter: EventEmitter2) =>
+        new NestUserStatusEventsGateway(emitter),
       inject: [EventEmitter2],
     },
     {
