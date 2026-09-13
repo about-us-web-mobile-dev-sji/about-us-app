@@ -1,15 +1,20 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateSchoolDto } from './dto/create-school.dto.js';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto.js';
 import { CreateSchoolUseCase } from '../../application/use-cases/commands/create-school/CreateSchool.js';
 import { ListSchoolsUseCase } from '../../application/use-cases/queries/list-schools/ListSchools.js';
 import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructure/http/auth.guard.js';
 import { SchoolResponseDto } from './dto/school-response.dto.js';
+import { ToggleSchoolStatus } from '../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
+import { AcceptSchoolInvitation } from '../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 
 @Controller('schools')
 export class SchoolController {
   constructor(
     private readonly createSchool: CreateSchoolUseCase,
     private readonly listSchools: ListSchoolsUseCase,
+    private readonly toggleStatus: ToggleSchoolStatus,
+    private readonly acceptSchoolInvitation: AcceptSchoolInvitation,
   ) {}
 
   @Get()
@@ -23,7 +28,7 @@ export class SchoolController {
   @UseGuards(AuthGuard)
   async create(@Body() dto: CreateSchoolDto, @Req() req: AuthenticatedRequest) {
     const userId = req.auth.subjectId;
-    
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -40,5 +45,23 @@ export class SchoolController {
       adminUserId: dto.adminUserId,
       createdBy: userId,
     });
+  }
+
+  @Patch(':id/toggle-block')
+  async toggleBlock(@Param('id') id: string) {
+    const { school } = await this.toggleStatus.handle({ schoolId: id });
+    return school.toPrimitives();
+  }
+
+  @Post(':id/accept')
+  async acceptInvitation(
+    @Param('id') id: string,
+    @Body() dto: AcceptInvitationDto,
+  ) {
+    const { school } = await this.acceptSchoolInvitation.handle({
+      schoolId: id,
+      adminUserId: dto.adminUserId,
+    });
+    return school.toPrimitives();
   }
 }
