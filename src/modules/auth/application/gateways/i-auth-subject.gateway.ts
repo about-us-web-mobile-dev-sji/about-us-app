@@ -8,6 +8,7 @@ export interface AuthSubjectGateway {
     lastName?: string;
   }): Promise<string>;
   canAuthenticateWithGoogle(subjectId: string): Promise<boolean>;
+  canChangePassword(subjectId: string): Promise<boolean>;
   exists(subjectId: string): Promise<boolean>;
   canAuthenticate(subjectId: string): Promise<boolean>;
 }
