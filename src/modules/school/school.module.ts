@@ -5,15 +5,19 @@ import { DatabaseModule } from '../../shared/infrastructure/database/database.mo
 import { SchoolEntity } from './infrastructure/persistence/typeorm/school.entity.js';
 import { TypeormSchoolRepository } from './infrastructure/persistence/typeorm-school.repository.js';
 import { CreateSchoolUseCase } from './application/use-cases/commands/create-school/CreateSchool.js';
+import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/ListSchools.js';
 import { SchoolController } from './infrastructure/http/school.controller.js';
 import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
 import { APP_FILTER } from '@nestjs/core';
 import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
+import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
+import { AuthModule } from '../auth/auth.module.js';
 
 @Module({
   imports: [
     DatabaseModule,
-    TypeOrmModule.forFeature([SchoolEntity]),
+    AuthModule,
+    TypeOrmModule.forFeature([SchoolEntity, MembershipEntity]),
   ],
   controllers: [SchoolController],
   providers: [
@@ -27,6 +31,12 @@ import { SchoolExceptionFilter } from './infrastructure/http/school-exception.fi
       provide: CreateSchoolUseCase,
       useFactory: (schools: SchoolRepository) =>
         new CreateSchoolUseCase(schools),
+      inject: [SCHOOL_REPOSITORY],
+    },
+    {
+      provide: ListSchoolsUseCase,
+      useFactory: (schools: SchoolRepository) =>
+        new ListSchoolsUseCase(schools),
       inject: [SCHOOL_REPOSITORY],
     },
     {

@@ -12,6 +12,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UserModule } from './modules/user/user.module.js';
 import { EventModule } from './modules/event/event.module.js';
+import { SchoolModule } from './modules/school/school.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -29,6 +30,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UserModule,
     AuthModule,
     EventModule,
+    SchoolModule,
 
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',

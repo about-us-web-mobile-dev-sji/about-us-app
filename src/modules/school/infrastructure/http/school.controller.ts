@@ -1,11 +1,23 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateSchoolDto } from './dto/create-school.dto.js';
 import { CreateSchoolUseCase } from '../../application/use-cases/commands/create-school/CreateSchool.js';
+import { ListSchoolsUseCase } from '../../application/use-cases/queries/list-schools/ListSchools.js';
 import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructure/http/auth.guard.js';
+import { SchoolResponseDto } from './dto/school-response.dto.js';
 
 @Controller('schools')
 export class SchoolController {
-  constructor(private readonly createSchool: CreateSchoolUseCase) {}
+  constructor(
+    private readonly createSchool: CreateSchoolUseCase,
+    private readonly listSchools: ListSchoolsUseCase,
+  ) {}
+
+  @Get()
+  @UseGuards(AuthGuard)
+  async findAll(): Promise<SchoolResponseDto[]> {
+    const output = await this.listSchools.handle();
+    return SchoolResponseDto.fromOutput(output);
+  }
 
   @Post()
   @UseGuards(AuthGuard)
