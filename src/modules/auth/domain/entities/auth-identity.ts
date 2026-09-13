@@ -14,6 +14,8 @@ export interface AuthIdentityProps {
 export type NewAuthIdentity = Omit<AuthIdentityProps, 'id'>;
 
 export class AuthIdentity {
+  static readonly ENTITY_TYPE = 'auth_identity';
+
   private constructor(private props: AuthIdentityProps) {}
 
   static prepareCreation(

@@ -4,7 +4,7 @@ import { SchoolEntity } from '../typeorm/school.entity.js';
 export class SchoolMapper {
   static toDomain(entity: SchoolEntity): School {
     return School.reconstitute({
-      id: entity.id as any,
+      id: entity.id,
       name: entity.name,
       address: entity.address,
       city: entity.city,

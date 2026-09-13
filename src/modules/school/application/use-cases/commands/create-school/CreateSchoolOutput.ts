@@ -1,8 +1,7 @@
-import type { UUID } from 'node:crypto';
 import type { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 
 export interface CreateSchoolOutput {
-  id: UUID;
+  id: string;
   name: string;
   address: string | null;
   city: string | null;

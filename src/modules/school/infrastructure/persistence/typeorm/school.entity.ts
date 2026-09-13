@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import { SchoolStatus } from '../../../domain/enums/school-status.enum.js';
+import type { UUID } from 'node:crypto';
 
 export const millisecondsTransformer = {
   to: (value: Date | null | undefined) => (value ? value.getTime() : null),
@@ -9,7 +10,7 @@ export const millisecondsTransformer = {
 @Entity({ schema: 'school', name: 'schools' })
 export class SchoolEntity {
   @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  id!: UUID;
 
   @Column({ type: 'varchar', length: 200, unique: true })
   name!: string;

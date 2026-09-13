@@ -13,6 +13,13 @@ function setup(existing: User | null = null) {
     findByEmail: vi.fn(async () => existing),
     findSuperAdmin: vi.fn(async () => null),
     superAdminExists: vi.fn(async () => false),
+    getAll: vi.fn(async () => ({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    })),
     createInitialSuperAdmin: vi.fn<UserRepository['createInitialSuperAdmin']>(),
     save: vi.fn(async (user: User) =>
       User.reconstitute({
