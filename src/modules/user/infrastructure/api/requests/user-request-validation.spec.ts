@@ -22,6 +22,11 @@ describe('User API validation', () => {
   it('rejects invalid filter types', () => {
     expect(() => ListUsersRequest.toInput({ search: [] } as unknown as ListUsersRequest)).toThrow(InvalidUserException);
     expect(() => ListUsersRequest.toInput({ status: 'UNKNOWN' } as unknown as ListUsersRequest)).toThrow(InvalidUserException);
+    expect(() => ListUsersRequest.toInput({ schoolId: 'invalid' })).toThrow(InvalidUserException);
+  });
+  it('passes a valid school identifier to the user filter', () => {
+    const schoolId = 'abcdef00-0000-4000-8000-000000000002';
+    expect(ListUsersRequest.toInput({ schoolId }).filters?.schoolId).toBe(schoolId);
   });
   it.each([undefined, {}, { status: 'UNKNOWN' }])('rejects invalid status body %j', (body) => {
     expect(() => UpdateUserStatusRequest.toInput(id, body as UpdateUserStatusRequest)).toThrow(InvalidUserException);
@@ -32,12 +37,18 @@ describe('User API validation', () => {
   });
   it('rejects invalid status before accessing persistence, even without HTTP', async () => {
     const findById = vi.fn();
-    const useCase = new UpdateUserStatus({ findById } as unknown as UserRepository);
+    const useCase = new UpdateUserStatus(
+      { findById } as unknown as UserRepository,
+      { publish: vi.fn() },
+    );
     await expect(useCase.updateUserStatus({ userId: id, status: 'UNKNOWN' as UserStatus })).rejects.toBeInstanceOf(InvalidUserException);
     expect(findById).not.toHaveBeenCalled();
   });
   it('reports a missing user and maps it to HTTP 404', async () => {
-    const useCase = new UpdateUserStatus({ findById: vi.fn().mockResolvedValue(null) } as unknown as UserRepository);
+    const useCase = new UpdateUserStatus(
+      { findById: vi.fn().mockResolvedValue(null) } as unknown as UserRepository,
+      { publish: vi.fn() },
+    );
     await expect(useCase.updateUserStatus({ userId: id, status: UserStatus.ACTIVE })).rejects.toBeInstanceOf(UserNotFoundException);
     const response = { status: vi.fn().mockReturnThis(), json: vi.fn() };
     const host = { switchToHttp: () => ({ getResponse: () => response }) } as unknown as ArgumentsHost;

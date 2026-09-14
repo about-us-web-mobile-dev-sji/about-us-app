@@ -10,6 +10,7 @@ import { UpdateUserStatusOutput } from './update-user-status.output.js';
 import UserStatus from '../../../../domain/enum/user-status.enum.js';
 import type { UserStatusEventsGateway } from '../../../gateway/user-status-events.gateway.js';
 import { UserStatusUpdatedEvent } from '../../../../domain/events/user-status-updated.event.js';
+import { UserNotFoundException } from '../../../../domain/exceptions/user-not-found.exception.js';
 
 @Injectable()
 export class UpdateUserStatus {
@@ -26,7 +27,7 @@ export class UpdateUserStatus {
         const id = UserId.create(updateUserStatusInput.userId).value;
         const user = await this.userRepository.findById(id);
 
-        if (user === null) throw new Error('Utilisateur introuvable');
+        if (user === null) throw new UserNotFoundException();
 
         const previousStatus = user.status;
 

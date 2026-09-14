@@ -7,6 +7,7 @@ import type { UserRepository } from '../../../../domain/repositories/i-user.repo
 function setup() {
   let current: User | null = null;
   const repository: UserRepository = {
+    getAll: vi.fn(),
     findSuperAdmin: vi.fn(async () => current),
     findById: vi.fn(async () => current),
     findByEmail: vi.fn(async () => current),

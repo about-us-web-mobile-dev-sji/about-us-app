@@ -7,18 +7,20 @@ import { AuthModule } from '../auth/auth.module.js';
 import { SchoolEntity } from './infrastructure/persistence/typeorm/school.entity.js';
 import { TypeormSchoolRepository } from './infrastructure/persistence/typeorm-school.repository.js';
 import { CreateSchoolUseCase } from './application/use-cases/commands/create-school/CreateSchool.js';
+import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/ListSchools.js';
 import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 import { SchoolController } from './infrastructure/http/school.controller.js';
 import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
 import { APP_FILTER } from '@nestjs/core';
 import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
+import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
 
 @Module({
   imports: [
     DatabaseModule,
-    TypeOrmModule.forFeature([SchoolEntity]),
     AuthModule,
+    TypeOrmModule.forFeature([SchoolEntity, MembershipEntity]),
   ],
   controllers: [SchoolController],
   providers: [
@@ -38,6 +40,12 @@ import { SchoolExceptionFilter } from './infrastructure/http/school-exception.fi
       provide: ToggleSchoolStatus,
       useFactory: (schools: SchoolRepository) =>
         new ToggleSchoolStatus(schools),
+      inject: [SCHOOL_REPOSITORY],
+    },
+    {
+      provide: ListSchoolsUseCase,
+      useFactory: (schools: SchoolRepository) =>
+        new ListSchoolsUseCase(schools),
       inject: [SCHOOL_REPOSITORY],
     },
     {
