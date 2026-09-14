@@ -5,12 +5,14 @@ import { createObserveModule } from '@nestjs/observe';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { SchoolModule } from './modules/school/school.module.js';
 import superAdminConfig from './config/super-admin.config.js';
 import databaseConfig from './config/data-base.config.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UserModule } from './modules/user/user.module.js';
+import { EventModule } from './modules/event/event.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -27,6 +29,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
     UserModule,
     AuthModule,
+    SchoolModule,
+    EventModule,
 
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',
