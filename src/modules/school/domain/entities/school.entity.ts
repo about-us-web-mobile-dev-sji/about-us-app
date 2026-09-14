@@ -84,6 +84,10 @@ export class School {
     return this.props.status;
   }
 
+  get adminUserId(): string | null {
+    return this.props.adminUserId;
+  }
+
   updateStatus(newStatus: SchoolStatus): void {
     if (!Object.values(SchoolStatus).includes(newStatus)) {
       throw new Error('Invalid school status');

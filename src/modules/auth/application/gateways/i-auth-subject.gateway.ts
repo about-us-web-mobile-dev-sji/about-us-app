@@ -1,7 +1,9 @@
+import type { GlobalRole } from '../../../user/domain/enum/global-role.enum.js';
+
 export interface AuthSubjectGateway {
   authenticationProfile(
     id: string,
-  ): Promise<{ id: string; email: string } | null>;
+  ): Promise<{ id: string; email: string; globalRole: GlobalRole } | null>;
   create(input: {
     email: string;
     firstName?: string;
