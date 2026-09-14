@@ -19,14 +19,13 @@ import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from '.
 import { UserModule } from '../user/user.module.js';
 import { APP_FILTER } from '@nestjs/core';
 import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
-import { USER_REPOSITORY, type UserRepository } from '../user/domain/repositories/i-user.repository.js';
-import { UserEntity } from '../user/infrastructure/persistence/entity/user.entity.js';
+import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
 
 @Module({
   imports: [
     DatabaseModule,
-    TypeOrmModule.forFeature([SchoolEntity, SchoolMembershipEntity, UserEntity,MembershipEntity]),
+    TypeOrmModule.forFeature([SchoolEntity, SchoolMembershipEntity, MembershipEntity]),
     UserModule,
     AuthModule,
   ],
@@ -61,10 +60,11 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       useFactory: (
         schools: SchoolRepository,
         memberships: SchoolMembershipRepository,
-        users: UserRepository,
+        users: UserAccountService,
       ) => new ReplaceSchoolAdministratorUseCase(schools, memberships, users),
-      inject: [SCHOOL_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, USER_REPOSITORY],},
-      {
+      inject: [SCHOOL_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, UserAccountService],
+    },
+    {
       provide: ListSchoolsUseCase,
       useFactory: (schools: SchoolRepository) =>
         new ListSchoolsUseCase(schools),

@@ -27,7 +27,7 @@ export class AcceptSchoolInvitation {
 
     const school = await this.schools.findById(input.schoolId as UUID);
     if (!school) {
-      throw new SchoolNotFoundException();
+      throw new SchoolNotFoundException(input.schoolId);
     }
 
     if (school.status === SchoolStatus.BLOCKED) {
