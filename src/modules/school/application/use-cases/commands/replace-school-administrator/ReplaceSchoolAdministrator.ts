@@ -2,7 +2,7 @@ import type { ReplaceSchoolAdministratorInput } from './ReplaceSchoolAdministrat
 import type { ReplaceSchoolAdministratorOutput } from './ReplaceSchoolAdministratorOutput.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
-import type { UserRepository } from '../../../../../user/domain/repositories/i-user.repository.js';
+import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
@@ -13,7 +13,7 @@ export class ReplaceSchoolAdministratorUseCase {
   constructor(
     private readonly schools: SchoolRepository,
     private readonly memberships: SchoolMembershipRepository,
-    private readonly users: UserRepository,
+    private readonly users: UserAccountService,
   ) {}
 
   async handle(
@@ -34,8 +34,8 @@ export class ReplaceSchoolAdministratorUseCase {
       throw new SchoolNotFoundException(input.schoolId);
     }
 
-    const newAdmin = await this.users.findById(input.newAdminUserId);
-    if (!newAdmin) {
+    const newAdminExists = await this.users.exists(input.newAdminUserId);
+    if (!newAdminExists) {
       throw new UserNotFoundException(input.newAdminUserId);
     }
 

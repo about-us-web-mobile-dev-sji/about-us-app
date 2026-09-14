@@ -12,6 +12,7 @@ import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructu
 import { SchoolResponseDto } from './dto/school-response.dto.js';
 import { ToggleSchoolStatus } from '../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from '../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
+import type { UUID } from 'crypto';
 
 @Controller('schools')
 @UseGuards(AuthGuard, RolesGuard)
@@ -59,7 +60,7 @@ export class SchoolController {
   @Patch(':schoolId/administrator')
   @Roles(GlobalRole.SUPER_ADMIN)
   async replaceAdministrator(
-    @Param('schoolId') schoolId: string,
+    @Param('schoolId') schoolId: UUID,
     @Body() dto: ReplaceSchoolAdminDto,
     @Request() req: AuthenticatedRequest,
   ) {

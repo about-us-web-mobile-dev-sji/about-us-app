@@ -1,5 +1,7 @@
+import { UUID } from "crypto";
+
 export interface ReplaceSchoolAdministratorInput {
-  schoolId: string;
-  newAdminUserId: string;
+  schoolId: UUID;
+  newAdminUserId: UUID;
   performedBy: string;
 }

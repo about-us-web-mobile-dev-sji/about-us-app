@@ -1,3 +1,5 @@
+import { UUID } from "crypto";
+
 export class ReplaceSchoolAdminDto {
-  newAdminUserId!: string;
+  newAdminUserId!: UUID;
 }

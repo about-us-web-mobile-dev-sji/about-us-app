@@ -12,10 +12,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UserModule } from './modules/user/user.module.js';
-<<<<<<< HEAD
-import { SchoolModule } from './modules/school/school.module.js';
-=======
->>>>>>> bf2f89ad25a959748ed2b806f2f111311ee8bd5a
 import { EventModule } from './modules/event/event.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
@@ -35,10 +31,6 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AuthModule,
     SchoolModule,
     EventModule,
-<<<<<<< HEAD
-=======
-    SchoolModule,
->>>>>>> bf2f89ad25a959748ed2b806f2f111311ee8bd5a
 
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',
