@@ -31,7 +31,6 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AuthModule,
     SchoolModule,
     EventModule,
-    SchoolModule,
 
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',

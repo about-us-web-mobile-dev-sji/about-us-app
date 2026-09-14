@@ -1,6 +1,6 @@
 export class SchoolNotFoundException extends Error {
-  constructor() {
-    super('School not found');
+  constructor(schoolId: string) {
+    super(`School with ID ${schoolId} not found`);
     this.name = 'SchoolNotFoundException';
   }
 }

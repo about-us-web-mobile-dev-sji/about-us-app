@@ -11,6 +11,12 @@ export class UserAuthSubjectGateway implements AuthSubjectGateway {
       !(await this.users.requiresPasswordAuthentication(id))
     );
   }
+  async canChangePassword(id: string) {
+    return (
+      (await this.users.canAuthenticate(id)) &&
+      (await this.users.requiresPasswordAuthentication(id))
+    );
+  }
   exists(id: string) {
     return this.users.exists(id);
   }
