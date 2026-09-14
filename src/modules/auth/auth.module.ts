@@ -1,6 +1,12 @@
+import { ChangePassword } from './application/use-cases/commands/change-password/change-password.js';
+import {
+  PASSWORD_CHANGE,
+  type PasswordChangeGateway,
+} from './application/gateways/i-password-change.gateway.js';
+import { TypeormPasswordChangeGateway } from './infrastructure/persistence/typeorm-password-change.gateway.js';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { TypeormAuthIdentityRepository } from './infrastructure/persistence/typeorm-auth-identity.repository.js';
 import { TypeormSessionRepository } from './infrastructure/persistence/typeorm-session.repository.js';
 import { AuthIdentityEntity } from './infrastructure/persistence/typeorm/auth-identity.entity.js';
@@ -90,6 +96,7 @@ import { AuthGuard } from './infrastructure/http/auth.guard.js';
   ],
   controllers: [AuthController, WebAuthController, MobileAuthController],
   exports: [
+    ChangePassword,
     AuthGuard,
     EmailLoginUseCase,
     GoogleLoginUseCase,
@@ -98,6 +105,39 @@ import { AuthGuard } from './infrastructure/http/auth.guard.js';
     LogoutUseCase,
   ],
   providers: [
+    {
+      provide: PASSWORD_CHANGE,
+      inject: [DataSource],
+      useFactory: (source: DataSource) =>
+        new TypeormPasswordChangeGateway(source),
+    },
+    {
+      provide: ChangePassword,
+      inject: [
+        ACCESS_TOKEN_SERVICE,
+        SessionValidator,
+        AUTH_SUBJECT,
+        AUTH_IDENTITY_REPOSITORY,
+        PASSWORD_ENCRYPTION,
+        PASSWORD_CHANGE,
+      ],
+      useFactory: (
+        access: AccessTokenGateway,
+        validator: SessionValidator,
+        subjects: AuthSubjectGateway,
+        identities: AuthIdentityRepository,
+        passwords: PasswordEncryptionGateway,
+        changes: PasswordChangeGateway,
+      ) =>
+        new ChangePassword(
+          access,
+          validator,
+          subjects,
+          identities,
+          passwords,
+          changes,
+        ),
+    },
     { provide: GOOGLE_TOKEN_VERIFIER, useExisting: GoogleTokenVerifier },
     AuthGuard,
     {
