@@ -1,4 +1,4 @@
-import type { ListEventLogsInput } from '../../../application/usecases/list-event-logs.input.js';
+import type { ListEventLogsInput } from '../../../../application/usecases/queries/list-event-log/list-event-logs.input.js';
 
 export interface EventLogListRequest {
   entityType?: string;

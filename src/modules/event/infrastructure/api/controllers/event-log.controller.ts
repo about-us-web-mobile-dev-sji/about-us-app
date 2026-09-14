@@ -8,14 +8,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { UUID } from 'node:crypto';
-import { ListEventLogs } from '../../application/usecases/list-event-logs.js';
-import { GetEventLog } from '../../application/usecases/get-event-log.js';
-import { EventLogService } from '../../application/usecases/event-log.service.js';
+import { ListEventLogs } from '../../../application/usecases/queries/list-event-log/list-event-logs.js';
+import { GetEventLog } from '../../../application/usecases/command/get-event-log/get-event-log.js';
+import { EventLogService } from '../../../application/services/event-log.service.js';
 import {
   EventLogRequestMapper,
   type EventLogListRequest,
-} from './requests/event-log.request.js';
-import { EventLogResponseMapper } from './responses/event-log.response.js';
+} from '../dto/requests/event-log.request.js';
+import { EventLogResponseMapper } from '../dto/responses/event-log.response.js';
 
 @Controller('event-logs')
 export class EventLogController {

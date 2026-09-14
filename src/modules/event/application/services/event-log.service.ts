@@ -4,7 +4,7 @@ import {
   EVENT_LOG_REPOSITORY,
   type EventLogRepository,
 } from '../../domain/repositories/event-log.repository.js';
-import { RecordEventLogInput } from '../command/record-event-log.input.js';
+import { RecordEventLogInput } from './record-event-log.input.js';
 import type { UUID } from 'node:crypto';
 import type { EventLogFilters, EventLogPagination, PaginatedEventLogs } from '../../domain/repositories/event-log.repository.js';
 

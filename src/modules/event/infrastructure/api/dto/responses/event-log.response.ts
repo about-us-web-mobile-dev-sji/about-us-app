@@ -1,5 +1,5 @@
-import type { EventLog } from '../../../domain/entities/event-log.js';
-import type { ListEventLogsOutput } from '../../../application/usecases/list-event-logs.output.js';
+import type { EventLog } from '../../../../domain/entities/event-log.js';
+import type { ListEventLogsOutput } from '../../../../application/usecases/queries/list-event-log/list-event-logs.output.js';
 
 export interface EventLogResponse {
   id: string;
