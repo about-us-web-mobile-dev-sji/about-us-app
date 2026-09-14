@@ -1,5 +1,6 @@
 import { User } from '../entities/user.entity.js';
 import UserStatus from '../enum/user-status.enum.js';
+import type { UUID } from 'node:crypto';
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 
@@ -20,6 +21,7 @@ export interface UserRepository {
 export interface UserFilters {
   status?: UserStatus;
   search?: string;
+  schoolId?: UUID;
 }
 
 export interface PaginationParams {

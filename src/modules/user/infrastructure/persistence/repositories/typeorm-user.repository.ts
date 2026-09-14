@@ -12,6 +12,7 @@ import type {
 import { SuperAdminEmailConflictException } from '../../../domain/exceptions/super-admin-email-conflict.exception.js';
 import { UserEmailAlreadyUsedException } from '../../../domain/exceptions/user-email-already-used.exception.js';
 import { UserMapper } from './../mappers/user.mapper.js';
+import { MembershipEntity } from '../../../../school/infrastructure/persistence/typeorm/membership.entity.js';
 export class TypeormUserRepository implements UserRepository {
   constructor(private readonly repo: Repository<UserEntity>) {}
   private read(row: UserEntity | null) {
@@ -40,6 +41,14 @@ export class TypeormUserRepository implements UserRepository {
   ): Promise<PaginatedResult<User>> {
     const query = this.repo.createQueryBuilder('user');
 
+    if (filters.schoolId) {
+      query.innerJoin(
+        MembershipEntity,
+        'membership',
+        'membership.user_id = user.id AND membership.school_id = :schoolId',
+        { schoolId: filters.schoolId },
+      );
+    }
     if (filters.status) query.andWhere('user.status = :status', { status: filters.status });
     if (filters.search) {
       query.andWhere(
