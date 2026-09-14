@@ -1,10 +1,12 @@
 import { InvalidUserException } from '../../../domain/exceptions/invalid-user.exception.js';
 import UserStatus from '../../../domain/enum/user-status.enum.js';
 import type { ListUsersInput } from '../../../application/use-cases/queries/list-users/list-users.input.js';
+import { UserId } from '../../../domain/value-objects/user-id.js';
 
 export class ListUsersRequest {
   status?: UserStatus;
   search?: string;
+  schoolId?: string;
   page?: string;
   limit?: string;
 
@@ -13,6 +15,9 @@ export class ListUsersRequest {
       throw new InvalidUserException('Invalid user status');
     if (request.search !== undefined && typeof request.search !== 'string')
       throw new InvalidUserException('Invalid user search');
+    const schoolId = request.schoolId === undefined
+      ? undefined
+      : UserId.create(request.schoolId).value;
     const parsePage = (value: unknown, fallback: number): number => {
       if (value === undefined) return fallback;
       if (typeof value !== 'string' || !/^[0-9]+$/.test(value))
@@ -23,7 +28,7 @@ export class ListUsersRequest {
       return parsed;
     };
     return {
-      filters: { status: request.status, search: request.search },
+      filters: { status: request.status, search: request.search, schoolId },
       pagination: {
         page: parsePage(request.page, 1),
         limit: parsePage(request.limit, 10),

@@ -1,38 +1,27 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Req,
-  Request,
-  Inject,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateSchoolDto } from './dto/create-school.dto.js';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto.js';
 import { CreateSchoolUseCase } from '../../application/use-cases/commands/create-school/CreateSchool.js';
+import { ListSchoolsUseCase } from '../../application/use-cases/queries/list-schools/ListSchools.js';
+import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructure/http/auth.guard.js';
+import { SchoolResponseDto } from './dto/school-response.dto.js';
 import { ToggleSchoolStatus } from '../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from '../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
-import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructure/http/auth.guard.js';
-import type { SchoolRepository } from '../../domain/repositories/i-school.repository.js';
-import { SCHOOL_REPOSITORY } from '../../domain/repositories/i-school.repository.js';
 
 @Controller('schools')
 export class SchoolController {
   constructor(
     private readonly createSchool: CreateSchoolUseCase,
+    private readonly listSchools: ListSchoolsUseCase,
     private readonly toggleStatus: ToggleSchoolStatus,
     private readonly acceptSchoolInvitation: AcceptSchoolInvitation,
-    @Inject(SCHOOL_REPOSITORY)
-    private readonly schoolRepository: SchoolRepository,
   ) {}
 
   @Get()
-  async findAll() {
-    const schools = await this.schoolRepository.findAll();
-    return schools.map((s) => s.toPrimitives());
+  @UseGuards(AuthGuard)
+  async findAll(): Promise<SchoolResponseDto[]> {
+    const output = await this.listSchools.handle();
+    return SchoolResponseDto.fromOutput(output);
   }
 
   @Post()
