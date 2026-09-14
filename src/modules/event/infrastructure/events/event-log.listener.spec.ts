@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EventLogListener } from './event-log.listener.js';
-import { EventLogService } from '../../application/usecases/event-log.service.js';
+import { EventLogService } from '../../application/services/event-log.service.js';
 import { SuperAdminCreatedEvent } from '../../../user/domain/events/super-admin-created.event.js';
 import { User } from '../../../user/domain/entities/user.entity.js';
 import UserStatus from '../../../user/domain/enum/user-status.enum.js';

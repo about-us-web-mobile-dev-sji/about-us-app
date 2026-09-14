@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { User } from '../../../user/domain/entities/user.entity.js';
-import { EventLogService } from '../../application/usecases/event-log.service.js';
+import { EventLogService } from '../../application/services/event-log.service.js';
 import { SuperAdminCreatedEvent } from '../../../user/domain/events/super-admin-created.event.js';
 import { UserStatusUpdatedEvent } from '../../../user/domain/events/user-status-updated.event.js';
 

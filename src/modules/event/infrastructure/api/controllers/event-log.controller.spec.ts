@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventLog } from '../../domain/entities/event-log.js';
+import { EventLog } from '../../../domain/entities/event-log.js';
 import { EventLogController } from './event-log.controller.js';
-import { EventLogService } from '../../application/usecases/event-log.service.js';
-import { ListEventLogs } from '../../application/usecases/list-event-logs.js';
-import { GetEventLog } from '../../application/usecases/get-event-log.js';
+import { EventLogService } from '../../../application/services/event-log.service.js';
+import { ListEventLogs } from '../../../application/usecases/queries/list-event-log/list-event-logs.js';
+import { GetEventLog } from '../../../application/usecases/command/get-event-log/get-event-log.js';
 
 describe('EventLogController', () => {
   it('returns logs for an aggregate as JSON-safe objects', async () => {

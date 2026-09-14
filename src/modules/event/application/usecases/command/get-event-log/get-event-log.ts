@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   EVENT_LOG_REPOSITORY,
   type EventLogRepository,
-} from '../../domain/repositories/event-log.repository.js';
+} from '../../../../domain/repositories/event-log.repository.js';
 
 @Injectable()
 export class GetEventLog {

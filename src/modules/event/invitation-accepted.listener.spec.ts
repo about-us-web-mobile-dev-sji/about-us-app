@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import type { INestApplication } from '@nestjs/common';
 import { InvitationAcceptedListener } from './invitation-accepted.listener.js';
-import { EventLogService } from './application/usecases/event-log.service.js';
+import { EventLogService } from './application/services/event-log.service.js';
 import { InvitationAcceptedEvent } from './invitation-accepted.event.js';
 
 describe('InvitationAcceptedListener', () => {

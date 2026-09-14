@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ListUsers } from '../../../application/use-cases/queries/list-users/list-users.js';
-import { ListUsersRequest } from '../requests/list-users.request.js';
-import { ListUsersResponse } from '../responses/list-users.response.js';
+import { ListUsersRequest } from '../dto/requests/list-users.request.js';
+import { ListUsersResponse } from '../dto/responses/list-users.response.js';
 import { UpdateUserStatus } from '../../../application/use-cases/commands/update-user-status/update-user-status.js';
-import { UpdateUserStatusRequest } from '../requests/update-user-status.request.js';
-import { UpdateUserStatusResponse } from '../responses/update-user-status.response.js';
+import { UpdateUserStatusRequest } from '../dto/requests/update-user-status.request.js';
+import { UpdateUserStatusResponse } from '../dto/responses/update-user-status.response.js';
 
 @Controller('users')
 export class UserController {
