@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ListUsersRequest } from './list-users.request.js';
 import { UpdateUserStatusRequest } from './update-user-status.request.js';
-import UserStatus from '../../../domain/enum/user-status.enum.js';
-import { InvalidUserException } from '../../../domain/exceptions/invalid-user.exception.js';
-import { UserNotFoundException } from '../../../domain/exceptions/user-not-found.exception.js';
-import { UpdateUserStatus } from '../../../application/use-cases/commands/update-user-status/update-user-status.js';
-import type { UserRepository } from '../../../domain/repositories/i-user.repository.js';
-import { UserExceptionFilter } from '../../config/user-exception.filter.js';
+import UserStatus from '../../../../domain/enum/user-status.enum.js';
+import { InvalidUserException } from '../../../../domain/exceptions/invalid-user.exception.js';
+import { UserNotFoundException } from '../../../../domain/exceptions/user-not-found.exception.js';
+import { UpdateUserStatus } from '../../../../application/use-cases/commands/update-user-status/update-user-status.js';
+import type { UserRepository } from '../../../../domain/repositories/i-user.repository.js';
+import { UserExceptionFilter } from '../../../config/user-exception.filter.js';
 import type { ArgumentsHost } from '@nestjs/common';
 
 const id = 'abcdef00-0000-4000-8000-000000000001';

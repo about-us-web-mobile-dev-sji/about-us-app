@@ -1,7 +1,7 @@
-import { InvalidUserException } from '../../../domain/exceptions/invalid-user.exception.js';
-import UserStatus from '../../../domain/enum/user-status.enum.js';
-import type { ListUsersInput } from '../../../application/use-cases/queries/list-users/list-users.input.js';
-import { UserId } from '../../../domain/value-objects/user-id.js';
+import { InvalidUserException } from '../../../../domain/exceptions/invalid-user.exception.js';
+import UserStatus from '../../../../domain/enum/user-status.enum.js';
+import type { ListUsersInput } from '../../../../application/use-cases/queries/list-users/list-users.input.js';
+import { UserId } from '../../../../domain/value-objects/user-id.js';
 
 export class ListUsersRequest {
   status?: UserStatus;

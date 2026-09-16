@@ -1,7 +1,7 @@
-import type { User } from '../../../domain/entities/user.entity.js';
-import type { ListUsersOutput } from '../../../application/use-cases/queries/list-users/list-users.output.js';
-import type UserStatus from '../../../domain/enum/user-status.enum.js';
-import type { GlobalRole } from '../../../domain/enum/global-role.enum.js';
+import type { User } from '../../../../domain/entities/user.entity.js';
+import type { ListUsersOutput } from '../../../../application/use-cases/queries/list-users/list-users.output.js';
+import type UserStatus from '../../../../domain/enum/user-status.enum.js';
+import type { GlobalRole } from '../../../../domain/enum/global-role.enum.js';
 
 export class UserResponse {
   id: string | undefined;
