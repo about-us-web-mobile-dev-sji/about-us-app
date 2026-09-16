@@ -27,13 +27,14 @@ import databaseConfig from '../../../config/data-base.config.js';
         } as DataSourceOptions);
         try {
           await dataSource.initialize();
-          
+
           if (options.synchronize) {
             // Création des schémas PostgreSQL
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS auth');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS "user"');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS event');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS school');
+            await dataSource.query('CREATE SCHEMA IF NOT EXISTS notification');
             await dataSource.synchronize();
           }
           return dataSource;

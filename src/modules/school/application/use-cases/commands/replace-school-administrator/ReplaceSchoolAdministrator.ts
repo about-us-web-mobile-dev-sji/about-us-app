@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { ReplaceSchoolAdministratorInput } from './ReplaceSchoolAdministratorInput.js';
 import type { ReplaceSchoolAdministratorOutput } from './ReplaceSchoolAdministratorOutput.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
@@ -14,6 +15,13 @@ export class ReplaceSchoolAdministratorUseCase {
     private readonly schools: SchoolRepository,
     private readonly memberships: SchoolMembershipRepository,
     private readonly users: UserAccountService,
+    private readonly roleChanged: (event: {
+      eventId: string;
+      schoolId: string;
+      schoolName: string;
+      recipientIds: string[];
+      occurredAt: Date;
+    }) => void = () => {},
   ) {}
 
   async handle(
@@ -50,11 +58,10 @@ export class ReplaceSchoolAdministratorUseCase {
     let membershipRevoked = false;
 
     if (previousAdminUserId) {
-      const previousMembership =
-        await this.memberships.findBySchoolAndUser(
-          input.schoolId,
-          previousAdminUserId,
-        );
+      const previousMembership = await this.memberships.findBySchoolAndUser(
+        input.schoolId,
+        previousAdminUserId,
+      );
 
       if (previousMembership) {
         previousMembership.revoke(input.performedBy);
@@ -88,6 +95,16 @@ export class ReplaceSchoolAdministratorUseCase {
 
     school.assignAdmin(input.newAdminUserId);
     await this.schools.save(school);
+
+    this.roleChanged({
+      eventId: randomUUID(),
+      schoolId: input.schoolId,
+      schoolName: school.toPrimitives().name,
+      recipientIds: [previousAdminUserId, input.newAdminUserId].filter(
+        (id): id is string => !!id,
+      ),
+      occurredAt: new Date(),
+    });
 
     return {
       schoolId: input.schoolId,
