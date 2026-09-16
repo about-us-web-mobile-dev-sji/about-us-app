@@ -22,6 +22,7 @@ export class SmtpEmailSender implements EmailSender {
       socketTimeout: 30000,
       disableFileAccess: true,
       disableUrlAccess: true,
+      localAddress:"0.0.0.0"
     });
   }
 

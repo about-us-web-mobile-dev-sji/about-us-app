@@ -89,11 +89,19 @@ export class SendNotification {
           text: rendered.message,
           html: rendered.html,
         });
-      } catch {
+      } catch (e) {
+
+        const errorInstance = e instanceof Error ? e : new Error(String(e));
+
+      
         this.logError({
           event: 'notification.email_failed',
           requestId: input.requestId,
+          recipientId: recipientId,
           type: input.type,
+          errorMessage: errorInstance.message,
+          errorStack: errorInstance.stack,
+          originalError: e, // Permet de garder l'objet d'origine si votre logger le supporte
         });
       }
     }
