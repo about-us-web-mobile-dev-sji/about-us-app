@@ -15,7 +15,7 @@ import { SuperAdminCreatedListener } from './infrastructure/events/super-admin-c
 import { CreateSuperAdminIdentityUseCase } from './application/use-cases/commands/create-super-admin-identity/CreateSuperAdminIdentity.js';
 import { EmailLoginUseCase } from './application/use-cases/commands/email-login/EmailLogin.js';
 import { APP_FILTER } from '@nestjs/core';
-import { AuthApplicationExceptionFilter } from './infrastructure/http/auth-application-exception.filter.js';
+import { AuthApplicationExceptionFilter } from './infrastructure/api/auth-application-exception.filter.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -60,13 +60,13 @@ import { NestJwtService } from './infrastructure/services/jwt.services.js';
 import { OpaqueRefreshTokenGateway } from './infrastructure/services/opaque-refresh-token.gateway.js';
 import { GoogleTokenVerifier } from './infrastructure/services/google-token-verifier.js';
 import { GOOGLE_TOKEN_VERIFIER } from './application/gateways/i-google-token-verifier.gateway.js';
-import { WebAuthController } from './infrastructure/http/web-auth.controller.js';
-import { MobileAuthController } from './infrastructure/http/mobile-auth.controller.js';
+import { WebAuthController } from './infrastructure/api/controllers/web-auth.controller.js';
+import { MobileAuthController } from './infrastructure/api/controllers/mobile-auth.controller.js';
 import { BCryptPasswordEncryptionGateway } from './infrastructure/services/bcrypt-password-encryption.gateway.js';
 import { GoogleStrategy } from './infrastructure/services/google.strategy.js';
 import { GoogleAuthGuard } from './infrastructure/services/google-auth-guard.services.js';
-import { AuthController } from './infrastructure/http/auth.controller.js';
-import { AuthGuard } from './infrastructure/http/auth.guard.js';
+import { AuthController } from './infrastructure/api/controllers/auth.controller.js';
+import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
 
 @Module({
   imports: [

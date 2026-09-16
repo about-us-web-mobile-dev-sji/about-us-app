@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { UUID } from 'node:crypto';
 import { EventLogService } from './application/usecases/event-log.service.js';
@@ -10,9 +10,10 @@ export class InvitationSentListener {
 
   @OnEvent('invitation.sent')
   async handle(event: InvitationSentEvent) {
-    console.log(
-      `[ÉVÉNEMENT REÇU] Invitation envoyée à ${event.email} pour l'école "${event.schoolName}" (${event.schoolId}) à ${event.sentAt.toISOString()}`,
-    );
+    new Logger(InvitationSentListener.name).log({
+      event: 'invitation.sent',
+      schoolId: event.schoolId,
+    });
 
     await this.eventLog.record({
       name: 'invitation.sent',

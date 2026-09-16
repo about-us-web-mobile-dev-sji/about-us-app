@@ -14,8 +14,14 @@ import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools
 import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 import { SchoolController } from './infrastructure/http/school.controller.js';
-import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
-import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from './domain/repositories/i-school-membership.repository.js';
+import {
+  SCHOOL_REPOSITORY,
+  type SchoolRepository,
+} from './domain/repositories/i-school.repository.js';
+import {
+  SCHOOL_MEMBERSHIP_REPOSITORY,
+  type SchoolMembershipRepository,
+} from './domain/repositories/i-school-membership.repository.js';
 import { UserModule } from '../user/user.module.js';
 import { APP_FILTER } from '@nestjs/core';
 import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
@@ -25,7 +31,11 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
 @Module({
   imports: [
     DatabaseModule,
-    TypeOrmModule.forFeature([SchoolEntity, SchoolMembershipEntity, MembershipEntity]),
+    TypeOrmModule.forFeature([
+      SchoolEntity,
+      SchoolMembershipEntity,
+      MembershipEntity,
+    ]),
     UserModule,
     AuthModule,
   ],
@@ -61,8 +71,22 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
         schools: SchoolRepository,
         memberships: SchoolMembershipRepository,
         users: UserAccountService,
-      ) => new ReplaceSchoolAdministratorUseCase(schools, memberships, users),
-      inject: [SCHOOL_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, UserAccountService],
+        emitter: EventEmitter2,
+      ) =>
+        new ReplaceSchoolAdministratorUseCase(
+          schools,
+          memberships,
+          users,
+          (event) => {
+            emitter.emit('school.member-role.changed', event);
+          },
+        ),
+      inject: [
+        SCHOOL_REPOSITORY,
+        SCHOOL_MEMBERSHIP_REPOSITORY,
+        UserAccountService,
+        EventEmitter2,
+      ],
     },
     {
       provide: ListSchoolsUseCase,

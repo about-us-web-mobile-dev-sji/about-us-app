@@ -8,6 +8,7 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
+  app.enableShutdownHooks();
 
   app.enableCors({
     origin: (

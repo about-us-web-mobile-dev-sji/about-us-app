@@ -13,6 +13,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('AppController (e2e)', () => {
 
   beforeEach(async () => {
     database = await createTestDatabase();
+    vi.stubEnv('EMAIL_ENABLED', 'false');
+    vi.stubEnv('NOTIFICATIONS_ENABLED', 'true');
     vi.stubEnv('DATABASE_TYPE', 'postgres');
     vi.stubEnv('DATABASE_SYNCHRONIZE', 'true');
     vi.stubEnv('DATABASE_HOST', database.connection.host);
@@ -52,9 +54,39 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('AppController (e2e)', () => {
       port: database.connection.port,
       username: database.connection.username,
       password: database.connection.password,
-      name: database.connection.database,
+      database: database.connection.database,
       synchronize: true,
     });
+  });
+
+  it('serves persisted notifications through the real authentication guard', async () => {
+    await request(app.getHttpServer()).get('/notifications').expect(401);
+    const login = await request(app.getHttpServer())
+      .post('/auth/mobile/login/email')
+      .send({
+        email: 'admin@example.com',
+        password: 'Test-admin-password-2026!',
+      })
+      .expect(200);
+    const authorization = `Bearer ${login.body.accessToken}`;
+    const notifications = await request(app.getHttpServer())
+      .get('/notifications')
+      .set('Authorization', authorization)
+      .expect(200);
+    expect(
+      notifications.body.items.some(
+        (item: { type: string }) => item.type === 'WELCOME',
+      ),
+    ).toBe(true);
+    await request(app.getHttpServer())
+      .patch('/notifications/read-all')
+      .set('Authorization', authorization)
+      .expect(204);
+    const count = await request(app.getHttpServer())
+      .get('/notifications/unread-count')
+      .set('Authorization', authorization)
+      .expect(200);
+    expect(count.body.count).toBe(0);
   });
 
   afterEach(async () => {

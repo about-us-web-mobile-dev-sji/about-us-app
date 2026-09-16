@@ -33,7 +33,6 @@ import { NestUserStatusEventsGateway } from './infrastructure/events/nest-user-s
 import { UpdateUserStatus } from './application/use-cases/commands/update-user-status/update-user-status.js';
 import { MembershipEntity } from '../school/infrastructure/persistence/typeorm/membership.entity.js';
 
-
 @Module({
   imports: [
     ConfigModule,
@@ -75,8 +74,11 @@ import { MembershipEntity } from '../school/infrastructure/persistence/typeorm/m
     },
     {
       provide: UserAccountService,
-      useFactory: (users: UserRepository) => new UserAccountService(users),
-      inject: [USER_REPOSITORY],
+      useFactory: (users: UserRepository, emitter: EventEmitter2) =>
+        new UserAccountService(users, (id) => {
+          emitter.emit('user.created', { subjectId: id });
+        }),
+      inject: [USER_REPOSITORY, EventEmitter2],
     },
     {
       provide: USER_REPOSITORY,
