@@ -6,6 +6,7 @@ export const EventLogPersistenceMapper = {
     return {
       id: log.id,
       name: log.name,
+      message: log.message,
       entityType: log.entityType,
       entityId: log.entityId,
       actorId: log.actorId ?? null,
@@ -18,6 +19,7 @@ export const EventLogPersistenceMapper = {
     return EventLog.reconstitute({
       id: row.id,
       name: row.name,
+      message: row.message,
       entityType: row.entityType,
       entityId: row.entityId,
       actorId: row.actorId ?? undefined,

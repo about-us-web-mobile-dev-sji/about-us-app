@@ -13,6 +13,7 @@ export class EventLogListener {
   async handleSuperAdminCreated(event: SuperAdminCreatedEvent): Promise<void> {
     await this.eventLogs.record({
       name: 'super-admin.created',
+      message: 'Un super administrateur a été créé.',
       entityType: User.ENTITY_TYPE,
       entityId: event.subjectId,
       payload: {
@@ -25,6 +26,7 @@ export class EventLogListener {
   async handleUserStatusUpdated(event: UserStatusUpdatedEvent): Promise<void> {
     await this.eventLogs.record({
       name: 'user.status.updated',
+      message: "Le statut de l'utilisateur a été mis à jour.",
       entityType: User.ENTITY_TYPE,
       entityId: event.subjectId,
       payload: {
