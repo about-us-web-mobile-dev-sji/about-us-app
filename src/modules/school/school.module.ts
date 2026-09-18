@@ -17,8 +17,6 @@ import { SchoolController } from './infrastructure/api/controllers/school.contro
 import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
 import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from './domain/repositories/i-school-membership.repository.js';
 import { UserModule } from '../user/user.module.js';
-import { APP_FILTER } from '@nestjs/core';
-import { SchoolExceptionFilter } from './infrastructure/api/school-exception.filter.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
 
@@ -75,10 +73,6 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2) =>
         new AcceptSchoolInvitation(schools, eventEmitter),
       inject: [SCHOOL_REPOSITORY, EventEmitter2],
-    },
-    {
-      provide: APP_FILTER,
-      useClass: SchoolExceptionFilter,
     },
   ],
   exports: [CreateSchoolUseCase, ReplaceSchoolAdministratorUseCase],

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Patch, UseGuards, Request, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Patch, UseGuards, Request, Req, UnauthorizedException } from '@nestjs/common';
 import { CreateSchoolDto } from '../dto/create-school.dto.js';
 import { ReplaceSchoolAdminDto } from '../dto/replace-school-admin.dto.js';
 import { ReplaceSchoolAdministratorUseCase } from '../../../application/use-cases/commands/replace-school-administrator/ReplaceSchoolAdministrator.js';
@@ -40,7 +40,7 @@ export class SchoolController {
     const userId = req.auth.subjectId;
 
     if (!userId) {
-      throw new Error('User not authenticated');
+          throw new UnauthorizedException('User not authenticated');
     }
 
     return await this.createSchool.handle({
@@ -67,7 +67,7 @@ export class SchoolController {
     const userId = req.auth.user.id;
 
     if (!userId) {
-      throw new Error('User not authenticated');
+          throw new UnauthorizedException('User not authenticated');
     }
 
     return await this.replaceAdmin.handle({

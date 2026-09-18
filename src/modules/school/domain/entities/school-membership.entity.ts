@@ -1,5 +1,6 @@
 import { MembershipRole } from '../enums/membership-role.enum.js';
 import { MembershipStatus } from '../enums/membership-status.enum.js';
+import { InvalidSchoolMembershipException } from '../exceptions/invalid-school-membership.exception.js';
 
 export interface SchoolMembershipProps {
   id: string;
@@ -25,13 +26,13 @@ export class SchoolMembership {
     const now = new Date();
 
     if (!input.schoolId?.trim()) {
-      throw new Error('School ID is required');
+          throw new InvalidSchoolMembershipException('School ID is required');
     }
     if (!input.userId?.trim()) {
-      throw new Error('User ID is required');
+          throw new InvalidSchoolMembershipException('User ID is required');
     }
     if (!input.grantedBy?.trim()) {
-      throw new Error('GrantedBy is required');
+          throw new InvalidSchoolMembershipException('GrantedBy is required');
     }
 
     return new SchoolMembership({
@@ -89,7 +90,7 @@ export class SchoolMembership {
 
   revoke(revokedBy: string): void {
     if (this.props.status === MembershipStatus.REVOKED) {
-      throw new Error('Membership is already revoked');
+          throw new InvalidSchoolMembershipException('Membership is already revoked');
     }
     this.props.status = MembershipStatus.REVOKED;
     this.props.revokedAt = new Date();
@@ -98,7 +99,7 @@ export class SchoolMembership {
 
   deactivate(): void {
     if (this.props.status === MembershipStatus.INACTIVE) {
-      throw new Error('Membership is already inactive');
+          throw new InvalidSchoolMembershipException('Membership is already inactive');
     }
     this.props.status = MembershipStatus.INACTIVE;
   }

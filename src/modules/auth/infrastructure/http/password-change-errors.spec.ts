@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ArgumentsHost } from '@nestjs/common';
-import { AuthApplicationExceptionFilter } from './auth-application-exception.filter.js';
+import { GlobalExceptionFilter } from '../../../../shared/infrastructure/http/global-exception.filter.js';
 import { InvalidPasswordException } from '../../domain/exceptions/invalid-password.exception.js';
 import { PasswordChangeForbiddenException } from '../../domain/exceptions/password-change-forbidden.exception.js';
 import { PasswordChangeConflictException } from '../../domain/exceptions/password-change-conflict.exception.js';
@@ -16,10 +16,10 @@ describe('Password change HTTP errors', () => {
     const host = {
       switchToHttp: () => ({ getResponse: () => response }),
     } as unknown as ArgumentsHost;
-    new AuthApplicationExceptionFilter().catch(error, host);
+    new GlobalExceptionFilter().catch(error, host);
     expect(response.status).toHaveBeenCalledWith(status);
     expect(response.json).toHaveBeenCalledWith(
-      expect.objectContaining({ statusCode: status, message: error.message }),
+      expect.objectContaining({ code: error.code, message: error.message, details: null }),
     );
   });
 });

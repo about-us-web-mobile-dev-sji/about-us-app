@@ -6,8 +6,8 @@ import type { UserAccountService } from '../../../../../user/application/user-ac
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
-import { UserNotFoundException } from '../../../../domain/exceptions/user-not-found.exception.js';
 import { InvalidReplacementException } from '../../../../domain/exceptions/invalid-replacement.exception.js';
+import { SchoolAdministratorNotFoundException } from '../../../../domain/exceptions/school-administrator-not-found.exception.js';
 
 export class ReplaceSchoolAdministratorUseCase {
   constructor(
@@ -36,7 +36,7 @@ export class ReplaceSchoolAdministratorUseCase {
 
     const newAdminExists = await this.users.exists(input.newAdminUserId);
     if (!newAdminExists) {
-      throw new UserNotFoundException(input.newAdminUserId);
+      throw new SchoolAdministratorNotFoundException(input.newAdminUserId);
     }
 
     const previousAdminUserId = school.adminUserId;

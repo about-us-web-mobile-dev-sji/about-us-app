@@ -1,4 +1,5 @@
 import { randomUUID, UUID } from 'node:crypto';
+import { InvalidEventLogException } from '../exceptions/invalid-event-log.exception.js';
 
 export interface EventLogProps {
   id: string;
@@ -19,11 +20,11 @@ export class EventLog {
     occurredAt?: Date;
   }): EventLog {
     if (!input.name.trim()) {
-      throw new Error('Event name is required');
+          throw new InvalidEventLogException('Event name is required');
     }
 
     if (!input.entityType.trim() || !input.entityId) {
-      throw new Error('Event entity is required');
+          throw new InvalidEventLogException('Event entity is required');
     }
 
     return new EventLog({

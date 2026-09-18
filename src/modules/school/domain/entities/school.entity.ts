@@ -1,5 +1,6 @@
 import { UUID } from 'crypto';
 import { SchoolStatus } from '../enums/school-status.enum.js';
+import { InvalidSchoolException } from '../exceptions/invalid-school.exception.js';
 
 export interface SchoolProps {
   id?: UUID;
@@ -38,15 +39,15 @@ export class School {
     const now = new Date();
 
     if (!Number.isFinite(now.getTime())) {
-      throw new Error('Invalid date');
+          throw new InvalidSchoolException('Invalid date');
     }
 
     if (!input.name?.trim()) {
-      throw new Error('School name is required');
+          throw new InvalidSchoolException('School name is required');
     }
 
     if (!input.createdBy?.trim()) {
-      throw new Error('createdBy is required');
+          throw new InvalidSchoolException('createdBy is required');
     }
 
     const props: SchoolProps = {
@@ -91,7 +92,7 @@ export class School {
 
   updateStatus(newStatus: SchoolStatus): void {
     if (!Object.values(SchoolStatus).includes(newStatus)) {
-      throw new Error('Invalid school status');
+          throw new InvalidSchoolException('Invalid school status');
     }
     this.props.status = newStatus;
     this.props.updatedAt = new Date();
@@ -111,7 +112,7 @@ export class School {
 
   assignAdmin(adminUserId: string): void {
     if (!adminUserId?.trim()) {
-      throw new Error('Admin user ID is required');
+          throw new InvalidSchoolException('Admin user ID is required');
     }
     this.props.adminUserId = adminUserId.trim();
     this.props.updatedAt = new Date();
