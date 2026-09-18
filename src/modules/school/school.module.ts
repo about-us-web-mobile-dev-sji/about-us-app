@@ -23,7 +23,11 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
 @Module({
   imports: [
     DatabaseModule,
-    TypeOrmModule.forFeature([SchoolEntity, SchoolMembershipEntity, MembershipEntity]),
+    TypeOrmModule.forFeature([
+      SchoolEntity,
+      SchoolMembershipEntity,
+      MembershipEntity,
+    ]),
     UserModule,
     AuthModule,
   ],
@@ -59,8 +63,22 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
         schools: SchoolRepository,
         memberships: SchoolMembershipRepository,
         users: UserAccountService,
-      ) => new ReplaceSchoolAdministratorUseCase(schools, memberships, users),
-      inject: [SCHOOL_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, UserAccountService],
+        emitter: EventEmitter2,
+      ) =>
+        new ReplaceSchoolAdministratorUseCase(
+          schools,
+          memberships,
+          users,
+          (event) => {
+            emitter.emit('school.member-role.changed', event);
+          },
+        ),
+      inject: [
+        SCHOOL_REPOSITORY,
+        SCHOOL_MEMBERSHIP_REPOSITORY,
+        UserAccountService,
+        EventEmitter2,
+      ],
     },
     {
       provide: ListSchoolsUseCase,

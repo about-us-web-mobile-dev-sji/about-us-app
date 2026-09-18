@@ -1,3 +1,4 @@
+import { NotificationModule } from './modules/notification/notification.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
@@ -33,6 +34,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AuthModule,
     SchoolModule,
     EventModule,
+    NotificationModule,
 
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',

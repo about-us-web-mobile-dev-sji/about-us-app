@@ -58,13 +58,13 @@ import { NestJwtService } from './infrastructure/services/jwt.services.js';
 import { OpaqueRefreshTokenGateway } from './infrastructure/services/opaque-refresh-token.gateway.js';
 import { GoogleTokenVerifier } from './infrastructure/services/google-token-verifier.js';
 import { GOOGLE_TOKEN_VERIFIER } from './application/gateways/i-google-token-verifier.gateway.js';
-import { WebAuthController } from './infrastructure/http/web-auth.controller.js';
-import { MobileAuthController } from './infrastructure/http/mobile-auth.controller.js';
+import { WebAuthController } from './infrastructure/api/controllers/web-auth.controller.js';
+import { MobileAuthController } from './infrastructure/api/controllers/mobile-auth.controller.js';
 import { BCryptPasswordEncryptionGateway } from './infrastructure/services/bcrypt-password-encryption.gateway.js';
 import { GoogleStrategy } from './infrastructure/services/google.strategy.js';
 import { GoogleAuthGuard } from './infrastructure/services/google-auth-guard.services.js';
-import { AuthController } from './infrastructure/http/auth.controller.js';
-import { AuthGuard } from './infrastructure/http/auth.guard.js';
+import { AuthController } from './infrastructure/api/controllers/auth.controller.js';
+import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
 
 @Module({
   imports: [

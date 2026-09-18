@@ -2,13 +2,13 @@ import { Body, Controller, Get, Param, Post, Patch, UseGuards, Request, Req, Una
 import { CreateSchoolDto } from '../dto/create-school.dto.js';
 import { ReplaceSchoolAdminDto } from '../dto/replace-school-admin.dto.js';
 import { ReplaceSchoolAdministratorUseCase } from '../../../application/use-cases/commands/replace-school-administrator/ReplaceSchoolAdministrator.js';
-import { Roles } from '../../../../auth/infrastructure/http/decorators/roles.decorator.js';
-import { RolesGuard } from '../../../../auth/infrastructure/http/roles.guard.js';
+import { Roles } from '../../../../auth/infrastructure/api/decorators/roles.decorator.js';
+import { RolesGuard } from '../../../../auth/infrastructure/api/guard/roles.guard.js';
 import { GlobalRole } from '../../../../user/domain/enum/global-role.enum.js';
 import { AcceptInvitationDto } from '../dto/accept-invitation.dto.js';
 import { CreateSchoolUseCase } from '../../../application/use-cases/commands/create-school/CreateSchool.js';
 import { ListSchoolsUseCase } from '../../../application/use-cases/queries/list-schools/ListSchools.js';
-import { AuthGuard, type AuthenticatedRequest } from '../../../../auth/infrastructure/http/auth.guard.js';
+import { AuthGuard, type AuthenticatedRequest } from '../../../../auth/infrastructure/api/guard/auth.guard.js';
 import { SchoolResponseDto } from '../dto/school-response.dto.js';
 import { ToggleSchoolStatus } from '../../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from '../../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';

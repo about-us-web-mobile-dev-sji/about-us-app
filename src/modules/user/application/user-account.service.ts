@@ -6,12 +6,32 @@ import { User } from '../domain/entities/user.entity.js';
 import UserStatus from '../domain/enum/user-status.enum.js';
 
 export class UserAccountService {
-
-  constructor(private readonly users: UserRepository) {}
+  constructor(
+    private readonly users: UserRepository,
+    private readonly onCreated: (id: string) => void = () => {},
+  ) {}
 
   async authenticationProfile(id: string) {
     const user = await this.users.findById(id);
-    return user ? { id: user.id!, email: user.email,globalRole:user.globalRole,firstName:user.firstName,lastName:user.lastName } : null;
+    return user
+      ? {
+          id: user.id!,
+          email: user.email,
+          globalRole: user.globalRole,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        }
+      : null;
+  }
+
+  async notificationRecipient(id: string) {
+    const user = await this.users.findById(id);
+    return user ? { id: user.id!, email: user.email } : null;
+  }
+
+  async notificationRecipientByEmail(email: string) {
+    const user = await this.users.findByEmail(email);
+    return user ? { id: user.id!, email: user.email } : null;
   }
 
   async requiresPasswordAuthentication(id: string): Promise<boolean> {
@@ -38,7 +58,7 @@ export class UserAccountService {
       throw new UserEmailAlreadyUsedException();
     const user = await this.users.save(candidate);
     if (!user.id) throw new UnpersistedUserException();
+    this.onCreated(user.id);
     return user.id;
   }
-  
 }
