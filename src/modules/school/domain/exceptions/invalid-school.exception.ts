@@ -1,6 +1,7 @@
-export class InvalidSchoolException extends Error {
+import { DomainException } from '../../../../shared/domain/exceptions/domain.exception.js';
+
+export class InvalidSchoolException extends DomainException {
   constructor(message: string = 'Invalid school data') {
-    super(message);
-    this.name = 'InvalidSchoolException';
+    super(message, 'INVALID_SCHOOL', 400);
   }
 }

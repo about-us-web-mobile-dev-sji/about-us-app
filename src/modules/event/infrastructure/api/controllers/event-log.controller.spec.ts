@@ -9,6 +9,7 @@ describe('EventLogController', () => {
   it('returns logs for an aggregate as JSON-safe objects', async () => {
     const eventLog = EventLog.create({
       name: 'user.status.updated',
+      message: "Le statut de l'utilisateur a été mis à jour.",
       entityType: 'user',
       entityId: '33333333-3333-4333-8333-333333333333',
       payload: { status: 'suspended' },
@@ -33,6 +34,7 @@ describe('EventLogController', () => {
       {
         id: eventLog.id,
         name: 'user.status.updated',
+        message: "Le statut de l'utilisateur a été mis à jour.",
         entityType: 'user',
         entityId: '33333333-3333-4333-8333-333333333333',
         actorId: null,

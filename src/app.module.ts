@@ -14,6 +14,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UserModule } from './modules/user/user.module.js';
 import { EventModule } from './modules/event/event.module.js';
+import { APP_FILTER } from '@nestjs/core';
+import { GlobalExceptionFilter } from './shared/infrastructure/http/global-exception.filter.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -42,6 +44,9 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
   ],
 
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+  ],
 })
 export class AppModule {}

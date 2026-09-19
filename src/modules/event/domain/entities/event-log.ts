@@ -1,8 +1,10 @@
 import { randomUUID, UUID } from 'node:crypto';
+import { InvalidEventLogException } from '../exceptions/invalid-event-log.exception.js';
 
 export interface EventLogProps {
   id: string;
   name: string;
+  message: string;
   entityType: string; 
   entityId: UUID;
   actorId?: string;
@@ -19,11 +21,21 @@ export class EventLog {
     occurredAt?: Date;
   }): EventLog {
     if (!input.name.trim()) {
-      throw new Error('Event name is required');
+      throw new InvalidEventLogException(
+        "Le nom de l'événement est obligatoire.",
+      );
+    }
+
+    if (!input.message.trim()) {
+      throw new InvalidEventLogException(
+        "Le message de l'événement est obligatoire.",
+      );
     }
 
     if (!input.entityType.trim() || !input.entityId) {
-      throw new Error('Event entity is required');
+      throw new InvalidEventLogException(
+        "L'entité associée à l'événement est obligatoire.",
+      );
     }
 
     return new EventLog({
@@ -46,6 +58,10 @@ export class EventLog {
 
   get name(): string {
     return this.props.name;
+  }
+
+  get message(): string {
+    return this.props.message;
   }
 
   get entityType(): string {

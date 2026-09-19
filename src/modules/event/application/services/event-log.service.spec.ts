@@ -8,6 +8,7 @@ describe('EventLogService', () => {
 
     const eventLog = await service.record({
       name: 'user.status.updated',
+      message: "Le statut de l'utilisateur a été mis à jour.",
       entityType: 'user',
       entityId: '33333333-3333-4333-8333-333333333333',
       actorId: 'admin-1',
@@ -21,6 +22,7 @@ describe('EventLogService', () => {
 
     expect(result).toEqual([eventLog]);
     expect(eventLog.name).toBe('user.status.updated');
+    expect(eventLog.message).toBe("Le statut de l'utilisateur a été mis à jour.");
     expect(eventLog.actorId).toBe('admin-1');
     expect(eventLog.payload).toEqual({ status: 'suspended' });
   });
@@ -31,9 +33,10 @@ describe('EventLogService', () => {
     await expect(
       service.record({
         name: ' ',
+        message: 'Message inutilisé',
         entityType: 'user',
         entityId: '33333333-3333-4333-8333-333333333333',
       }),
-    ).rejects.toThrow('Event name is required');
+    ).rejects.toThrow("Le nom de l'événement est obligatoire.");
   });
 });

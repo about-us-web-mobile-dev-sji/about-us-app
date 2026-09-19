@@ -2,6 +2,7 @@ import { UUID } from "crypto";
 
 export interface RecordEventLogInput {
   name: string;
+  message: string;
   entityType: string;
   entityId: UUID;
   actorId?: string;

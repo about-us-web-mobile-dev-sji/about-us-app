@@ -14,8 +14,6 @@ import { AuthSessionEntity } from './infrastructure/persistence/typeorm/auth-ses
 import { SuperAdminCreatedListener } from './infrastructure/events/super-admin-created.listener.js';
 import { CreateSuperAdminIdentityUseCase } from './application/use-cases/commands/create-super-admin-identity/CreateSuperAdminIdentity.js';
 import { EmailLoginUseCase } from './application/use-cases/commands/email-login/EmailLogin.js';
-import { APP_FILTER } from '@nestjs/core';
-import { AuthApplicationExceptionFilter } from './infrastructure/api/auth-application-exception.filter.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -192,7 +190,6 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
           },
         ),
     },
-    { provide: APP_FILTER, useClass: AuthApplicationExceptionFilter },
     GoogleAuthGuard,
     {
       provide: GoogleStrategy,

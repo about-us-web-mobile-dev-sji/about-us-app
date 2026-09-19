@@ -19,6 +19,7 @@ describe('EventLogListener', () => {
 
     expect(record).toHaveBeenCalledWith({
       name: 'super-admin.created',
+      message: 'Un super administrateur a été créé.',
       entityType: User.ENTITY_TYPE,
       entityId: event.subjectId,
       payload: { email: event.email },
@@ -38,6 +39,7 @@ describe('EventLogListener', () => {
 
     expect(record).toHaveBeenCalledWith({
       name: 'user.status.updated',
+      message: "Le statut de l'utilisateur a été mis à jour.",
       entityType: User.ENTITY_TYPE,
       entityId: event.subjectId,
       payload: { previousStatus: UserStatus.ACTIVE, status: UserStatus.SUSPENDED },
