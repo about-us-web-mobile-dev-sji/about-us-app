@@ -89,6 +89,55 @@ export class School {
     return this.props.adminUserId;
   }
 
+  update(changes: {
+    name?: string;
+    address?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+    phoneNumber?: string | null;
+    email?: string | null;
+    website?: string | null;
+  }): void {
+    if (changes.name !== undefined) {
+      const name = changes.name.trim();
+      if (!name) {
+        throw new Error('School name is required');
+      }
+      this.props.name = name;
+    }
+
+    if (changes.address !== undefined) {
+      this.props.address = changes.address?.trim() || null;
+    }
+
+    if (changes.city !== undefined) {
+      this.props.city = changes.city?.trim() || null;
+    }
+
+    if (changes.postalCode !== undefined) {
+      this.props.postalCode = changes.postalCode?.trim() || null;
+    }
+
+    if (changes.country !== undefined) {
+      this.props.country = changes.country?.trim() || null;
+    }
+
+    if (changes.phoneNumber !== undefined) {
+      this.props.phoneNumber = changes.phoneNumber?.trim() || null;
+    }
+
+    if (changes.email !== undefined) {
+      this.props.email = changes.email?.trim() || null;
+    }
+
+    if (changes.website !== undefined) {
+      this.props.website = changes.website?.trim() || null;
+    }
+
+    this.props.updatedAt = new Date();
+  }
+
   updateStatus(newStatus: SchoolStatus): void {
     if (!Object.values(SchoolStatus).includes(newStatus)) {
       throw new Error('Invalid school status');

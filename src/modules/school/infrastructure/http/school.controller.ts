@@ -12,6 +12,9 @@ import { AuthGuard, type AuthenticatedRequest } from '../../../auth/infrastructu
 import { SchoolResponseDto } from './dto/school-response.dto.js';
 import { ToggleSchoolStatus } from '../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from '../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
+import { UpdateSchoolUseCase } from '../../application/use-cases/commands/update-school/UpdateSchool.js';
+import { UpdateSchoolDto } from './dto/update-school.dto.js';
+import { SchoolDetailDto } from './dto/school-detail.dto.js';
 import type { UUID } from 'crypto';
 
 @Controller('schools')
@@ -23,6 +26,7 @@ export class SchoolController {
      private readonly listSchools: ListSchoolsUseCase,
     private readonly toggleStatus: ToggleSchoolStatus,
     private readonly acceptSchoolInvitation: AcceptSchoolInvitation,
+    private readonly updateSchool: UpdateSchoolUseCase,
   ) {}
 
   
@@ -34,7 +38,15 @@ export class SchoolController {
     return SchoolResponseDto.fromOutput(output);
   }
 
+  @Get('managed')
+  @Roles(GlobalRole.SUPER_ADMIN)
+  async findAllManaged(): Promise<SchoolDetailDto[]> {
+    const output = await this.listSchools.handle();
+    return SchoolDetailDto.fromSchools(output);
+  }
+
   @Post()
+  @Roles(GlobalRole.SUPER_ADMIN)
   @UseGuards(AuthGuard)
   async create(@Body() dto: CreateSchoolDto, @Req() req: AuthenticatedRequest) {
     const userId = req.auth.subjectId;
@@ -77,7 +89,25 @@ export class SchoolController {
     });
   }
 
+  @Patch(':id')
+  @Roles(GlobalRole.SUPER_ADMIN)
+  async update(@Param('id') id: string, @Body() dto: UpdateSchoolDto) {
+    const { school } = await this.updateSchool.handle({
+      schoolId: id,
+      name: dto.name,
+      address: dto.address,
+      city: dto.city,
+      postalCode: dto.postalCode,
+      country: dto.country,
+      phoneNumber: dto.phoneNumber,
+      email: dto.email,
+      website: dto.website,
+    });
+    return school.toPrimitives();
+  }
+
   @Patch(':id/toggle-block')
+  @Roles(GlobalRole.SUPER_ADMIN)
   async toggleBlock(@Param('id') id: string) {
     const { school } = await this.toggleStatus.handle({ schoolId: id });
     return school.toPrimitives();

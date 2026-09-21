@@ -13,6 +13,7 @@ import { ReplaceSchoolAdministratorUseCase } from './application/use-cases/comma
 import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/ListSchools.js';
 import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
+import { UpdateSchoolUseCase } from './application/use-cases/commands/update-school/UpdateSchool.js';
 import { SchoolController } from './infrastructure/http/school.controller.js';
 import {
   SCHOOL_REPOSITORY,
@@ -101,10 +102,23 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       inject: [SCHOOL_REPOSITORY, EventEmitter2],
     },
     {
+      provide: UpdateSchoolUseCase,
+      useFactory: (schools: SchoolRepository) =>
+        new UpdateSchoolUseCase(schools),
+      inject: [SCHOOL_REPOSITORY],
+    },
+    {
       provide: APP_FILTER,
       useClass: SchoolExceptionFilter,
     },
   ],
-  exports: [CreateSchoolUseCase, ReplaceSchoolAdministratorUseCase],
+  exports: [
+    CreateSchoolUseCase,
+    ReplaceSchoolAdministratorUseCase,
+    ListSchoolsUseCase,
+    ToggleSchoolStatus,
+    AcceptSchoolInvitation,
+    UpdateSchoolUseCase,
+  ],
 })
 export class SchoolModule {}

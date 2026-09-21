@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion des écoles — Test complet</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    body { background: #f4f7fe; color: #2b3674; padding: 24px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .header h1 { font-size: 22px; color: #1b2559; }
+    #authStatus { font-size: 13px; margin-top: 4px; font-weight: 600; color: #ff9800; }
+    .btn { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #4318ff; color: #fff; }
+    .btn-cancel { background: #e9edf7; color: #2b3674; }
+    .card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,.06); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f9faff; text-align: left; padding: 14px 16px; font-size: 12px; color: #a3b2c7; text-transform: uppercase; }
+    td { padding: 14px 16px; font-size: 14px; border-top: 1px solid #f3f6fc; }
+    .badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .badge-active { background: #e6faf5; color: #05cd99; }
+    .badge-blocked { background: #fde8e8; color: #ee5d50; }
+    .btn-sm { font-size: 12px; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; margin-right: 6px; }
+    .btn-edit { background: #e9edf7; color: #4318ff; }
+    .btn-block { background: #ffe5e5; color: #e31a1a; }
+    .btn-unblock { background: #e0f9f1; color: #01b574; }
+    .empty { text-align: center; padding: 30px; color: #a3b2c7; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); justify-content: center; align-items: center; z-index: 100; }
+    .modal-content { background: #fff; border-radius: 16px; padding: 26px; width: 480px; max-width: 94%; }
+    .modal-content h3 { margin-bottom: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; font-size: 14px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #2b3674; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13px; display: none; z-index: 200; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Gestion des écoles</h1>
+        <div id="authStatus">Connexion en cours…</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">+ Ajouter une école</button>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Ville / Pays</th>
+            <th>Email</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="schoolList">
+          <tr><td colspan="5" class="empty">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal" id="addModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Ajouter une école</h3>
+      <form id="createSchoolForm" onsubmit="handleSave(event)">
+        <div class="form-group"><label>Nom de l'école *</label><input type="text" id="name" required placeholder="Institut Saint-Jean"></div>
+        <div class="form-group"><label>Adresse</label><input type="text" id="address" placeholder="Avenue Kennedy"></div>
+        <div class="form-group"><label>Ville</label><input type="text" id="city" placeholder="Yaoundé"></div>
+        <div class="form-group"><label>Code postal</label><input type="text" id="postalCode" placeholder="BP 1234"></div>
+        <div class="form-group"><label>Pays</label><input type="text" id="country" placeholder="Cameroun"></div>
+        <div class="form-group"><label>Téléphone</label><input type="text" id="phoneNumber" placeholder="+237 690123456"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="email" placeholder="contact@stjean.cm"></div>
+        <div class="form-group"><label>Site web</label><input type="text" id="website" placeholder="https://stjean.cm"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary" id="modalSubmit">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/schools';
+    const LIST_URL = API_URL + '/managed';
+    const AUTH_URL = 'http://localhost:3000/auth/mobile/login/email';
+    const EMAIL = 'admin@example.com';
+    const PASSWORD = 'superadminpassword';
+
+    let accessToken = null;
+    let editingSchoolId = null;
+    let schoolsCache = [];
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
+    }
+
+    async function login() {
+      const statusDiv = document.getElementById('authStatus');
+      try {
+        const res = await fetch(AUTH_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: EMAIL, password: PASSWORD })
+        });
+        const data = await res.json();
+        if (res.ok && data.accessToken) {
+          accessToken = data.accessToken;
+          statusDiv.style.color = 'green';
+          statusDiv.innerText = 'Connecté en tant que ' + data.user.email;
+          return true;
+        }
+        statusDiv.style.color = 'red';
+        statusDiv.innerText = 'Échec de connexion : ' + (data.message || res.statusText);
+        return false;
+      } catch (e) {
+        statusDiv.style.color = 'red';
+        statusDiv.innerText = 'Échec de connexion (serveur démarré ?) : ' + e.message;
+        return false;
+      }
+    }
+
+    async function apiFetch(url, options) {
+      if (!options) options = {};
+      const headers = options.headers || {};
+      headers['Authorization'] = 'Bearer ' + accessToken;
+      let res = await fetch(url, Object.assign({}, options, { headers: headers }));
+      if (res.status === 401) {
+        const logged = await login();
+        if (logged) {
+          headers['Authorization'] = 'Bearer ' + accessToken;
+          res = await fetch(url, Object.assign({}, options, { headers: headers }));
+        }
+      }
+      return res;
+    }
+
+    async function fetchSchools() {
+      try {
+        const res = await apiFetch(LIST_URL);
+        if (res.ok) {
+          renderTable(await res.json());
+        } else {
+          showToast("Impossible de charger les écoles (HTTP " + res.status + ")");
+        }
+      } catch (e) {
+        showToast("Erreur de connexion avec l'API (serveur démarré ?)");
+      }
+    }
+
+    function renderTable(schools) {
+      schoolsCache = schools;
+      const tbody = document.getElementById('schoolList');
+      if (!schools.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Aucune école enregistrée.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = schools.map(s => {
+        const blocked = s.status === 'BLOCKED' || s.isBlocked;
+        return `
+          <tr>
+            <td><strong>${s.name}</strong></td>
+            <td>${s.city || 'N/A'}, ${s.country || 'N/A'}</td>
+            <td>${s.email || 'N/A'}</td>
+            <td><span class="badge ${blocked ? 'badge-blocked' : 'badge-active'}">${blocked ? 'BLOQUÉE' : 'ACTIVE'}</span></td>
+            <td>
+              <button class="btn-sm btn-edit" onclick="openEditModal('${s.id}')">Modifier</button>
+              <button class="btn-sm ${blocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleBlock('${s.id}')">${blocked ? 'Débloquer' : 'Bloquer'}</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function toggleBlock(id) {
+      try {
+        const res = await apiFetch(API_URL + '/' + id + '/toggle-block', { method: 'PATCH' });
+        if (res.ok) {
+          showToast("Statut mis à jour dans PostgreSQL !");
+          fetchSchools();
+        } else {
+          showToast("Échec de la mise à jour du statut");
+        }
+      } catch (e) {
+        showToast("Erreur réseau lors de la mise à jour");
+      }
+    }
+
+    function openModal() {
+      editingSchoolId = null;
+      document.getElementById('createSchoolForm').reset();
+      document.getElementById('modalTitle').innerText = 'Ajouter une école';
+      document.getElementById('modalSubmit').innerText = 'Enregistrer';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function openEditModal(id) {
+      const school = schoolsCache.find(s => s.id === id);
+      if (!school) return;
+      editingSchoolId = id;
+      ['name', 'address', 'city', 'postalCode', 'country', 'phoneNumber', 'email', 'website'].forEach(k => {
+        document.getElementById(k).value = school[k] || '';
+      });
+      document.getElementById('modalTitle').innerText = "Modifier l'école";
+      document.getElementById('modalSubmit').innerText = 'Enregistrer les modifications';
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    async function handleSave(e) {
+      e.preventDefault();
+      const payload = {};
+      const name = document.getElementById('name').value.trim();
+      if (name) payload.name = name;
+      ['address', 'city', 'postalCode', 'country', 'phoneNumber', 'email', 'website'].forEach(k => {
+        const v = document.getElementById(k).value.trim();
+        if (v) payload[k] = v;
+      });
+
+      const isEdit = editingSchoolId !== null;
+      const url = isEdit ? API_URL + '/' + editingSchoolId : API_URL01_URL;
+      try {
+        const res = await apiFetch(url, {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(isEdit ? "École modifiée dans PostgreSQL !" : "École créée dans PostgreSQL !");
+          document.getElementById('createSchoolForm').reset();
+          closeModal();
+          fetchSchools();
+        } else {
+          const errorMsg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+          showToast('Erreur : ' + (errorMsg || "Échec de l'enregistrement"));
+        }
+      } catch (err) {
+        showToast("Erreur réseau lors de l'enregistrement");
+      }
+    }
+
+    login().then(ok => { if (ok) fetchSchools(); });
+  </script>
+</body>
+</html>
