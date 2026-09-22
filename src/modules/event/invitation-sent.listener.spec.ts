@@ -39,6 +39,7 @@ describe('InvitationSentListener', () => {
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'invitation.sent',
+        message: 'Une invitation a été envoyée pour l\'école "École test" à "admin@ecole.test".',
         entityType: 'school',
         entityId: '11111111-1111-4111-8111-111111111111',
       }),

@@ -6,6 +6,7 @@ import type { SchoolRepository } from '../../../../domain/repositories/i-school.
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/school-name-already-exists.exception.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
+import { UnpersistedSchoolException } from '../../../../domain/exceptions/unpersisted-school.exception.js';
 
 export class CreateSchoolUseCase {
   constructor(
@@ -42,7 +43,7 @@ export class CreateSchoolUseCase {
 
     const savedSchool = await this.schools.save(school);
     const primitives = savedSchool.toPrimitives();
-    if (!primitives.id) throw new Error('Repository returned an unpersisted school');
+    if (!primitives.id) throw new UnpersistedSchoolException();
 
     if (primitives.email) {
       this.eventEmitter.emit(

@@ -17,6 +17,7 @@ export class InvitationSentListener {
 
     await this.eventLog.record({
       name: 'invitation.sent',
+      message: `Une invitation a été envoyée pour l'école "${event.schoolName}" à "${event.email}".`,
       entityType: 'school',
       entityId: event.schoolId as UUID,
       payload: { email: event.email, schoolName: event.schoolName },

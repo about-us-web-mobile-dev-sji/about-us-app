@@ -14,7 +14,7 @@ import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools
 import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 import { UpdateSchoolUseCase } from './application/use-cases/commands/update-school/UpdateSchool.js';
-import { SchoolController } from './infrastructure/http/school.controller.js';
+import { SchoolController } from './infrastructure/api/controllers/school.controller.js';
 import {
   SCHOOL_REPOSITORY,
   type SchoolRepository,
@@ -24,8 +24,6 @@ import {
   type SchoolMembershipRepository,
 } from './domain/repositories/i-school-membership.repository.js';
 import { UserModule } from '../user/user.module.js';
-import { APP_FILTER } from '@nestjs/core';
-import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
 
@@ -106,10 +104,6 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       useFactory: (schools: SchoolRepository) =>
         new UpdateSchoolUseCase(schools),
       inject: [SCHOOL_REPOSITORY],
-    },
-    {
-      provide: APP_FILTER,
-      useClass: SchoolExceptionFilter,
     },
   ],
   exports: [

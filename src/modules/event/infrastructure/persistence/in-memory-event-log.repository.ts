@@ -30,6 +30,7 @@ export class InMemoryEventLogRepository implements EventLogRepository {
         !search ||
         [
           eventLog.name,
+          eventLog.message,
           eventLog.entityType,
           eventLog.entityId,
           eventLog.actorId ?? '',
