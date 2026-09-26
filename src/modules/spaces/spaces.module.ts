@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
@@ -53,6 +54,7 @@ import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filte
   imports: [
     DatabaseModule,
     TypeOrmModule.forFeature([SpaceEntity, SpaceMembershipEntity]),
+    AuthModule,
   ],
   controllers: [SpaceController, SpaceMembershipController, SpaceDesignationController],
   exports: [

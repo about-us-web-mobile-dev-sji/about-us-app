@@ -1,4 +1,4 @@
-import type { SuspendSchoolMemberInput } from './SuspendSchoolMemberInput.js';
+import type { SuspendSchoolMemberInput } from './suspend-school-member.input.js';
 import type { SuspendSchoolMemberOutput } from './suspend-school-member.output.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';

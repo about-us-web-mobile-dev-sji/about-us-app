@@ -21,8 +21,6 @@ import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from '.
 import { UserModule } from '../user/user.module.js';
 import { SpacesModule } from '../spaces/spaces.module.js';
 import { EnsureSchoolRootUseCase } from '../spaces/application/use-cases/commands/ensure-school-root/ensure-school-root.js';
-import { APP_FILTER } from '@nestjs/core';
-import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
 
