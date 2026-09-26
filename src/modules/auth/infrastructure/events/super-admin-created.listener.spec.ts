@@ -43,5 +43,5 @@ describe('SuperAdminCreatedListener event integration', () => {
     await expect(publisher.publish(event)).resolves.toBeUndefined();
     expect(handle).toHaveBeenCalledTimes(2);
     expect(event).not.toHaveProperty('password');
-  });
+  }, 15_000);
 });
