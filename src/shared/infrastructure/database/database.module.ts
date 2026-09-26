@@ -35,6 +35,7 @@ import databaseConfig from '../../../config/data-base.config.js';
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS event');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS school');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS notification');
+            await dataSource.query('CREATE SCHEMA IF NOT EXISTS spaces');
             await dataSource.synchronize();
           }
           return dataSource;
