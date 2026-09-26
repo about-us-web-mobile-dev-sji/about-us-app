@@ -16,6 +16,7 @@ export class InvitationAcceptedListener {
 
     await this.eventLog.record({
       name: 'invitation.accepted',
+      message: `L'invitation pour l'école "${event.schoolName}" a été acceptée.`,
       entityType: 'school',
       entityId: event.schoolId as UUID,
       payload: {

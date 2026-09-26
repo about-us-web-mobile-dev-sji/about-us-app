@@ -8,6 +8,7 @@ import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
 import { EnsureSchoolRootUseCase } from '../../../../../spaces/application/use-cases/commands/ensure-school-root/ensure-school-root.js';
 import type { UUID } from 'node:crypto';
+import { UnpersistedSchoolException } from '../../../../domain/exceptions/unpersisted-school.exception.js';
 
 export class CreateSchoolUseCase {
   constructor(
@@ -45,7 +46,7 @@ export class CreateSchoolUseCase {
 
     const savedSchool = await this.schools.save(school);
     const primitives = savedSchool.toPrimitives();
-    if (!primitives.id) throw new Error('Repository returned an unpersisted school');
+    if (!primitives.id) throw new UnpersistedSchoolException();
 
     // Ensure school root space is created
     await this.ensureSchoolRoot.handle({

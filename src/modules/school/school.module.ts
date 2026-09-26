@@ -13,15 +13,9 @@ import { ReplaceSchoolAdministratorUseCase } from './application/use-cases/comma
 import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/ListSchools.js';
 import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
-import { SchoolController } from './infrastructure/http/school.controller.js';
-import {
-  SCHOOL_REPOSITORY,
-  type SchoolRepository,
-} from './domain/repositories/i-school.repository.js';
-import {
-  SCHOOL_MEMBERSHIP_REPOSITORY,
-  type SchoolMembershipRepository,
-} from './domain/repositories/i-school-membership.repository.js';
+import { SchoolController } from './infrastructure/api/controllers/school.controller.js';
+import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
+import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from './domain/repositories/i-school-membership.repository.js';
 import { UserModule } from '../user/user.module.js';
 import { SpacesModule } from '../spaces/spaces.module.js';
 import { EnsureSchoolRootUseCase } from '../spaces/application/use-cases/commands/ensure-school-root/ensure-school-root.js';
@@ -102,10 +96,6 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2) =>
         new AcceptSchoolInvitation(schools, eventEmitter),
       inject: [SCHOOL_REPOSITORY, EventEmitter2],
-    },
-    {
-      provide: APP_FILTER,
-      useClass: SchoolExceptionFilter,
     },
   ],
   exports: [CreateSchoolUseCase, ReplaceSchoolAdministratorUseCase],

@@ -40,6 +40,7 @@ describe('InvitationAcceptedListener', () => {
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'invitation.accepted',
+        message: 'L\'invitation pour l\'école "École test" a été acceptée.',
         entityType: 'school',
         entityId: '11111111-1111-4111-8111-111111111111',
       }),

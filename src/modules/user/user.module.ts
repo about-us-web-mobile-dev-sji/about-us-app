@@ -1,8 +1,6 @@
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { APP_FILTER } from '@nestjs/core';
-import { UserExceptionFilter } from './infrastructure/config/user-exception.filter.js';
 import { TypeormUserRepository } from './infrastructure/persistence/repositories/typeorm-user.repository.js';
 import {
   SUPER_ADMIN_EVENTS,
@@ -42,7 +40,6 @@ import { MembershipEntity } from '../school/infrastructure/persistence/typeorm/m
   controllers: [UserController],
   exports: [UserAccountService],
   providers: [
-    { provide: APP_FILTER, useClass: UserExceptionFilter },
     ListUsers,
     {
       provide: UpdateUserStatus,

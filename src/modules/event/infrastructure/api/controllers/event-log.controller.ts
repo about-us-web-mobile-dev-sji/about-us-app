@@ -29,7 +29,9 @@ export class EventLogController {
   async list(@Query() request: EventLogListRequest) {
     const input = EventLogRequestMapper.toListInput(request);
     if (input.pagination && (input.pagination.page < 1 || input.pagination.limit < 1))
-      throw new BadRequestException('page and limit must be positive');
+      throw new BadRequestException(
+        'La page et la limite des journaux d\'événements doivent être positives.',
+      );
 
     return EventLogResponseMapper.list(await this.listEventLogs.execute(input));
   }
@@ -46,7 +48,11 @@ export class EventLogController {
   @Get(':id')
   async findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: UUID) {
     const log = await this.getEventLog.execute(id);
-    if (!log) throw new NotFoundException('Event log not found');
+    if (!log) {
+      throw new NotFoundException(
+        "Le journal d'événement demandé est introuvable.",
+      );
+    }
 
     return EventLogResponseMapper.one(log);
   }

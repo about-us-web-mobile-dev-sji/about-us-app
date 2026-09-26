@@ -4,6 +4,7 @@ import type { ListEventLogsOutput } from '../../../../application/usecases/queri
 export interface EventLogResponse {
   id: string;
   name: string;
+  message: string;
   entityType: string;
   entityId: string;
   actorId: string | null;
@@ -24,6 +25,7 @@ export const EventLogResponseMapper = {
     return {
       id: log.id,
       name: log.name,
+      message: log.message,
       entityType: log.entityType,
       entityId: log.entityId,
       actorId: log.actorId ?? null,

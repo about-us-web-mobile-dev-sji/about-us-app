@@ -10,6 +10,9 @@ export class EventLogEntity {
   name!: string;
 
   @Column('text')
+  message!: string;
+
+  @Column('text')
   entityType!: string;
 
   @Column('text')

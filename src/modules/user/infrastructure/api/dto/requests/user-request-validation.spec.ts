@@ -6,7 +6,7 @@ import { InvalidUserException } from '../../../../domain/exceptions/invalid-user
 import { UserNotFoundException } from '../../../../domain/exceptions/user-not-found.exception.js';
 import { UpdateUserStatus } from '../../../../application/use-cases/commands/update-user-status/update-user-status.js';
 import type { UserRepository } from '../../../../domain/repositories/i-user.repository.js';
-import { UserExceptionFilter } from '../../../config/user-exception.filter.js';
+import { GlobalExceptionFilter } from '../../../../../../shared/infrastructure/http/global-exception.filter.js';
 import type { ArgumentsHost } from '@nestjs/common';
 
 const id = 'abcdef00-0000-4000-8000-000000000001';
@@ -52,8 +52,8 @@ describe('User API validation', () => {
     await expect(useCase.updateUserStatus({ userId: id, status: UserStatus.ACTIVE })).rejects.toBeInstanceOf(UserNotFoundException);
     const response = { status: vi.fn().mockReturnThis(), json: vi.fn() };
     const host = { switchToHttp: () => ({ getResponse: () => response }) } as unknown as ArgumentsHost;
-    new UserExceptionFilter().catch(new UserNotFoundException(), host);
+    new GlobalExceptionFilter().catch(new UserNotFoundException(), host);
     expect(response.status).toHaveBeenCalledWith(404);
-    expect(response.json).toHaveBeenCalledWith({ statusCode: 404, message: 'User not found' });
+    expect(response.json).toHaveBeenCalledWith({ code: 'USER_NOT_FOUND', message: 'User not found', details: null });
   });
 });
