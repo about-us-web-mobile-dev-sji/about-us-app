@@ -104,6 +104,23 @@ export class SchoolMembership {
     this.props.status = MembershipStatus.INACTIVE;
   }
 
+  suspend(): void {
+    if (this.props.status === MembershipStatus.REVOKED) {
+          throw new InvalidSchoolMembershipException('Cannot suspend a revoked membership');
+    }
+    if (this.props.status === MembershipStatus.SUSPENDED) {
+          throw new InvalidSchoolMembershipException('Membership is already suspended');
+    }
+    this.props.status = MembershipStatus.SUSPENDED;
+  }
+
+  cancelSuspension(): void {
+    if (this.props.status !== MembershipStatus.SUSPENDED) {
+          throw new InvalidSchoolMembershipException('Membership is not suspended');
+    }
+    this.props.status = MembershipStatus.ACTIVE;
+  }
+
   changeRole(newRole: MembershipRole): void {
     this.props.role = newRole;
   }

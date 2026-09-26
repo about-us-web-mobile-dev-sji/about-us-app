@@ -12,6 +12,8 @@ import { AuthGuard, type AuthenticatedRequest } from '../../../../auth/infrastru
 import { SchoolResponseDto } from '../dto/school-response.dto.js';
 import { ToggleSchoolStatus } from '../../../application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
 import { AcceptSchoolInvitation } from '../../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
+import { SuspendSchoolMemberUseCase } from '../../../application/use-cases/commands/suspend-school-member/suspend-school-member.js';
+import { CancelSchoolMemberSuspensionUseCase } from '../../../application/use-cases/commands/cancel-school-member-suspension/cancel-school-member-suspension.js';
 import type { UUID } from 'crypto';
 
 @Controller('schools')
@@ -23,6 +25,8 @@ export class SchoolController {
      private readonly listSchools: ListSchoolsUseCase,
     private readonly toggleStatus: ToggleSchoolStatus,
     private readonly acceptSchoolInvitation: AcceptSchoolInvitation,
+    private readonly suspendMember: SuspendSchoolMemberUseCase,
+    private readonly cancelMemberSuspension: CancelSchoolMemberSuspensionUseCase,
   ) {}
 
   
@@ -93,5 +97,47 @@ export class SchoolController {
       adminUserId: dto.adminUserId,
     });
     return school.toPrimitives();
+  }
+
+  @Patch(':schoolId/members/:memberUserId/suspend')
+  async suspendSchoolMember(
+    @Param('schoolId') schoolId: string,
+    @Param('memberUserId') memberUserId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const performedBy = req.auth.subjectId;
+
+    if (!performedBy) {
+          throw new UnauthorizedException('User not authenticated');
+    }
+
+    const { membership } = await this.suspendMember.handle({
+      schoolId,
+      memberUserId,
+      performedBy,
+    });
+
+    return membership.toPrimitives();
+  }
+
+  @Patch(':schoolId/members/:memberUserId/cancel-suspension')
+  async cancelSchoolMemberSuspension(
+    @Param('schoolId') schoolId: string,
+    @Param('memberUserId') memberUserId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const performedBy = req.auth.subjectId;
+
+    if (!performedBy) {
+          throw new UnauthorizedException('User not authenticated');
+    }
+
+    const { membership } = await this.cancelMemberSuspension.handle({
+      schoolId,
+      memberUserId,
+      performedBy,
+    });
+
+    return membership.toPrimitives();
   }
 }
