@@ -15,12 +15,11 @@ import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-scho
 import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 import { SuspendSchoolMemberUseCase } from './application/use-cases/commands/suspend-school-member/suspend-school-member.js';
 import { CancelSchoolMemberSuspensionUseCase } from './application/use-cases/commands/cancel-school-member-suspension/cancel-school-member-suspension.js';
+import { RevokeSchoolMemberUseCase } from './application/use-cases/commands/revoke-school-member/revoke-school-member.js';
 import { SchoolController } from './infrastructure/api/controllers/school.controller.js';
 import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
 import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from './domain/repositories/i-school-membership.repository.js';
 import { UserModule } from '../user/user.module.js';
-import { SpacesModule } from '../spaces/spaces.module.js';
-import { EnsureSchoolRootUseCase } from '../spaces/application/use-cases/commands/ensure-school-root/ensure-school-root.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
 
@@ -34,7 +33,6 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     ]),
     UserModule,
     AuthModule,
-    SpacesModule,
   ],
   controllers: [SchoolController],
   providers: [
@@ -52,9 +50,9 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     },
     {
       provide: CreateSchoolUseCase,
-      useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2, ensureSchoolRoot: EnsureSchoolRootUseCase) =>
-        new CreateSchoolUseCase(schools, eventEmitter, ensureSchoolRoot),
-      inject: [SCHOOL_REPOSITORY, EventEmitter2, EnsureSchoolRootUseCase],
+      useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2) =>
+        new CreateSchoolUseCase(schools, eventEmitter),
+      inject: [SCHOOL_REPOSITORY, EventEmitter2],
     },
     {
       provide: ToggleSchoolStatus,
@@ -107,6 +105,12 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       provide: CancelSchoolMemberSuspensionUseCase,
       useFactory: (memberships: SchoolMembershipRepository) =>
         new CancelSchoolMemberSuspensionUseCase(memberships),
+      inject: [SCHOOL_MEMBERSHIP_REPOSITORY],
+    },
+    {
+      provide: RevokeSchoolMemberUseCase,
+      useFactory: (memberships: SchoolMembershipRepository) =>
+        new RevokeSchoolMemberUseCase(memberships),
       inject: [SCHOOL_MEMBERSHIP_REPOSITORY],
     },
   ],

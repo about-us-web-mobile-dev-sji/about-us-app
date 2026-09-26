@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CancelSchoolMemberSuspensionUseCase } from './cancel-school-member-suspension.js';
+import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
+import { CancelSchoolMemberSuspensionUseCase } from './CancelSchoolMemberSuspension.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
@@ -70,6 +71,7 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
       schoolId,
       memberUserId,
       performedBy: adminUserId,
+      performedByGlobalRole: GlobalRole.USER,
     });
 
     expect(membership.status).toBe(MembershipStatus.ACTIVE);
@@ -84,8 +86,27 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
     const useCase = new CancelSchoolMemberSuspensionUseCase(repo);
 
     await expect(
-      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId }),
+      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+  });
+
+  it('cancels the suspension when the performer is a global super admin with no membership in the school', async () => {
+    const superAdminId = 'super-admin-1';
+    const suspendedMember = SchoolMembership.reconstitute(membershipProps());
+    const { repo, all } = repository([suspendedMember]);
+    const useCase = new CancelSchoolMemberSuspensionUseCase(repo);
+
+    const { membership } = await useCase.handle({
+      schoolId,
+      memberUserId,
+      performedBy: superAdminId,
+      performedByGlobalRole: GlobalRole.SUPER_ADMIN,
+    });
+
+    expect(membership.status).toBe(MembershipStatus.ACTIVE);
+    expect(all().find((m) => m.userId === memberUserId)?.status).toBe(
+      MembershipStatus.ACTIVE,
+    );
   });
 
   it('throws when the performer is not a school admin', async () => {
@@ -101,7 +122,7 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
     const useCase = new CancelSchoolMemberSuspensionUseCase(repo);
 
     await expect(
-      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId }),
+      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
@@ -118,7 +139,7 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
     const useCase = new CancelSchoolMemberSuspensionUseCase(repo);
 
     await expect(
-      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId }),
+      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(SchoolMembershipNotFoundException);
   });
 
@@ -138,7 +159,7 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
     const useCase = new CancelSchoolMemberSuspensionUseCase(repo);
 
     await expect(
-      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId }),
+      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(InvalidSchoolMembershipException);
   });
 });

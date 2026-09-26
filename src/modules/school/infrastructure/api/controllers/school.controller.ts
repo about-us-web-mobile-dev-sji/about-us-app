@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Patch, UseGuards, Request, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Patch, Delete, UseGuards, Request, Req, UnauthorizedException } from '@nestjs/common';
 import { CreateSchoolDto } from '../dto/create-school.dto.js';
 import { ReplaceSchoolAdminDto } from '../dto/replace-school-admin.dto.js';
 import { ReplaceSchoolAdministratorUseCase } from '../../../application/use-cases/commands/replace-school-administrator/ReplaceSchoolAdministrator.js';
@@ -14,6 +14,7 @@ import { ToggleSchoolStatus } from '../../../application/use-cases/commands/togg
 import { AcceptSchoolInvitation } from '../../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 import { SuspendSchoolMemberUseCase } from '../../../application/use-cases/commands/suspend-school-member/suspend-school-member.js';
 import { CancelSchoolMemberSuspensionUseCase } from '../../../application/use-cases/commands/cancel-school-member-suspension/cancel-school-member-suspension.js';
+import { RevokeSchoolMemberUseCase } from '../../../application/use-cases/commands/revoke-school-member/revoke-school-member.js';
 import type { UUID } from 'crypto';
 
 @Controller('schools')
@@ -27,6 +28,7 @@ export class SchoolController {
     private readonly acceptSchoolInvitation: AcceptSchoolInvitation,
     private readonly suspendMember: SuspendSchoolMemberUseCase,
     private readonly cancelMemberSuspension: CancelSchoolMemberSuspensionUseCase,
+    private readonly revokeMember: RevokeSchoolMemberUseCase,
   ) {}
 
   
@@ -115,6 +117,7 @@ export class SchoolController {
       schoolId,
       memberUserId,
       performedBy,
+      performedByGlobalRole: req.auth.user.globalRole,
     });
 
     return membership.toPrimitives();
@@ -136,6 +139,29 @@ export class SchoolController {
       schoolId,
       memberUserId,
       performedBy,
+      performedByGlobalRole: req.auth.user.globalRole,
+    });
+
+    return membership.toPrimitives();
+  }
+
+  @Delete(':schoolId/members/:memberUserId')
+  async revokeSchoolMember(
+    @Param('schoolId') schoolId: string,
+    @Param('memberUserId') memberUserId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const performedBy = req.auth.subjectId;
+
+    if (!performedBy) {
+          throw new UnauthorizedException('User not authenticated');
+    }
+
+    const { membership } = await this.revokeMember.handle({
+      schoolId,
+      memberUserId,
+      performedBy,
+      performedByGlobalRole: req.auth.user.globalRole,
     });
 
     return membership.toPrimitives();

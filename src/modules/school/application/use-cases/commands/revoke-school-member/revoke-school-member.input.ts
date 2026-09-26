@@ -1,6 +1,6 @@
 import type { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 
-export interface SuspendSchoolMemberInput {
+export interface RevokeSchoolMemberInput {
   schoolId: string;
   memberUserId: string;
   performedBy: string;

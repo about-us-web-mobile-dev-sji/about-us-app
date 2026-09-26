@@ -3,6 +3,7 @@ import type { SuspendSchoolMemberOutput } from './suspend-school-member.output.j
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
+import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolMembershipNotFoundException } from '../../../../domain/exceptions/school-membership-not-found.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
@@ -21,16 +22,20 @@ export class SuspendSchoolMemberUseCase {
       throw new InvalidSchoolMembershipException('PerformedBy is required');
     }
 
+    const isSuperAdmin =
+      input.performedByGlobalRole === GlobalRole.SUPER_ADMIN;
+
     const performerMembership = await this.memberships.findBySchoolAndUser(
       input.schoolId,
       input.performedBy,
     );
 
-    if (
-      !performerMembership ||
-      performerMembership.role !== MembershipRole.SCHOOL_ADMIN ||
-      performerMembership.status !== MembershipStatus.ACTIVE
-    ) {
+    const isActiveSchoolAdmin =
+      !!performerMembership &&
+      performerMembership.role === MembershipRole.SCHOOL_ADMIN &&
+      performerMembership.status === MembershipStatus.ACTIVE;
+
+    if (!isSuperAdmin && !isActiveSchoolAdmin) {
       throw new SchoolMembershipActionForbiddenException();
     }
 

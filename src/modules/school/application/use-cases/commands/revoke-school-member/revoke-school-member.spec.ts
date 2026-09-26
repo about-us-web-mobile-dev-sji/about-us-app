@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
-import { SuspendSchoolMemberUseCase } from './SuspendSchoolMember.js';
+import { RevokeSchoolMemberUseCase } from './revoke-school-member.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
@@ -9,7 +9,7 @@ import { SchoolMembershipNotFoundException } from '../../../../domain/exceptions
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 
-describe('SuspendSchoolMemberUseCase', () => {
+describe('RevokeSchoolMemberUseCase', () => {
   const schoolId = '11111111-1111-4111-8111-111111111111';
   const adminUserId = 'admin-1';
   const memberUserId = 'member-1';
@@ -53,18 +53,21 @@ describe('SuspendSchoolMemberUseCase', () => {
     };
   };
 
-  it('suspends a member when the performer is an active admin of the school', async () => {
-    const admin = SchoolMembership.reconstitute(
+  const activeAdmin = () =>
+    SchoolMembership.reconstitute(
       membershipProps({
         id: 'admin-membership',
         userId: adminUserId,
         role: MembershipRole.SCHOOL_ADMIN,
       }),
     );
+
+  it('revokes a member when the performer is an active admin of the school', async () => {
+    const admin = activeAdmin();
     const member = SchoolMembership.reconstitute(membershipProps());
 
     const { repo, all } = repository([admin, member]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     const { membership } = await useCase.handle({
       schoolId,
@@ -73,27 +76,48 @@ describe('SuspendSchoolMemberUseCase', () => {
       performedByGlobalRole: GlobalRole.USER,
     });
 
-    expect(membership.status).toBe(MembershipStatus.SUSPENDED);
+    expect(membership.status).toBe(MembershipStatus.REVOKED);
+    expect(membership.revokedBy).toBe(adminUserId);
+    expect(membership.revokedAt).toBeInstanceOf(Date);
     expect(all().find((m) => m.userId === memberUserId)?.status).toBe(
-      MembershipStatus.SUSPENDED,
+      MembershipStatus.REVOKED,
     );
+  });
+
+  it('revokes a suspended member as well', async () => {
+    const admin = activeAdmin();
+    const suspendedMember = SchoolMembership.reconstitute(
+      membershipProps({ status: MembershipStatus.SUSPENDED }),
+    );
+
+    const { repo } = repository([admin, suspendedMember]);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
+
+    const { membership } = await useCase.handle({
+      schoolId,
+      memberUserId,
+      performedBy: adminUserId,
+      performedByGlobalRole: GlobalRole.USER,
+    });
+
+    expect(membership.status).toBe(MembershipStatus.REVOKED);
   });
 
   it('throws when the performer has no membership in the school', async () => {
     const member = SchoolMembership.reconstitute(membershipProps());
     const { repo } = repository([member]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     await expect(
       useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
-  it('suspends a member when the performer is a global super admin with no membership in the school', async () => {
+  it('revokes a member when the performer is a global super admin with no membership in the school', async () => {
     const superAdminId = 'super-admin-1';
     const member = SchoolMembership.reconstitute(membershipProps());
     const { repo, all } = repository([member]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     const { membership } = await useCase.handle({
       schoolId,
@@ -102,9 +126,10 @@ describe('SuspendSchoolMemberUseCase', () => {
       performedByGlobalRole: GlobalRole.SUPER_ADMIN,
     });
 
-    expect(membership.status).toBe(MembershipStatus.SUSPENDED);
+    expect(membership.status).toBe(MembershipStatus.REVOKED);
+    expect(membership.revokedBy).toBe(superAdminId);
     expect(all().find((m) => m.userId === memberUserId)?.status).toBe(
-      MembershipStatus.SUSPENDED,
+      MembershipStatus.REVOKED,
     );
   });
 
@@ -114,95 +139,62 @@ describe('SuspendSchoolMemberUseCase', () => {
     );
     const member = SchoolMembership.reconstitute(membershipProps());
     const { repo } = repository([nonAdmin, member]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     await expect(
       useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
-  it('throws when the performer admin membership is not active', async () => {
-    const suspendedAdmin = SchoolMembership.reconstitute(
-      membershipProps({
-        id: 'admin-membership',
-        userId: adminUserId,
-        role: MembershipRole.SCHOOL_ADMIN,
-        status: MembershipStatus.SUSPENDED,
-      }),
-    );
-    const member = SchoolMembership.reconstitute(membershipProps());
-    const { repo } = repository([suspendedAdmin, member]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
-
-    await expect(
-      useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
-    ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
-  });
-
-  it('throws when an administrator tries to suspend themselves', async () => {
-    const admin = SchoolMembership.reconstitute(
-      membershipProps({
-        id: 'admin-membership',
-        userId: adminUserId,
-        role: MembershipRole.SCHOOL_ADMIN,
-      }),
-    );
+  it('throws when an administrator tries to revoke themselves', async () => {
+    const admin = activeAdmin();
     const { repo } = repository([admin]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     await expect(
-      useCase.handle({ schoolId, memberUserId: adminUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
+      useCase.handle({
+        schoolId,
+        memberUserId: adminUserId,
+        performedBy: adminUserId,
+      performedByGlobalRole: GlobalRole.USER,
+      }),
     ).rejects.toBeInstanceOf(InvalidSchoolMembershipException);
   });
 
   it('throws when the targeted member has no membership in the school', async () => {
-    const admin = SchoolMembership.reconstitute(
-      membershipProps({
-        id: 'admin-membership',
-        userId: adminUserId,
-        role: MembershipRole.SCHOOL_ADMIN,
-      }),
-    );
+    const admin = activeAdmin();
     const { repo } = repository([admin]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     await expect(
       useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
     ).rejects.toBeInstanceOf(SchoolMembershipNotFoundException);
   });
 
-  it('throws when the targeted member is already suspended', async () => {
-    const admin = SchoolMembership.reconstitute(
+  it('throws when trying to revoke the school administrator membership', async () => {
+    const admin = activeAdmin();
+    const otherAdmin = SchoolMembership.reconstitute(
       membershipProps({
-        id: 'admin-membership',
-        userId: adminUserId,
+        id: 'other-admin-membership',
+        userId: memberUserId,
         role: MembershipRole.SCHOOL_ADMIN,
       }),
     );
-    const alreadySuspended = SchoolMembership.reconstitute(
-      membershipProps({ status: MembershipStatus.SUSPENDED }),
-    );
-    const { repo } = repository([admin, alreadySuspended]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const { repo } = repository([admin, otherAdmin]);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     await expect(
       useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
-    ).rejects.toBeInstanceOf(InvalidSchoolMembershipException);
+    ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
-  it('throws when the targeted member is revoked', async () => {
-    const admin = SchoolMembership.reconstitute(
-      membershipProps({
-        id: 'admin-membership',
-        userId: adminUserId,
-        role: MembershipRole.SCHOOL_ADMIN,
-      }),
-    );
-    const revoked = SchoolMembership.reconstitute(
+  it('throws when the targeted member is already revoked', async () => {
+    const admin = activeAdmin();
+    const alreadyRevoked = SchoolMembership.reconstitute(
       membershipProps({ status: MembershipStatus.REVOKED }),
     );
-    const { repo } = repository([admin, revoked]);
-    const useCase = new SuspendSchoolMemberUseCase(repo);
+    const { repo } = repository([admin, alreadyRevoked]);
+    const useCase = new RevokeSchoolMemberUseCase(repo);
 
     await expect(
       useCase.handle({ schoolId, memberUserId, performedBy: adminUserId, performedByGlobalRole: GlobalRole.USER }),
