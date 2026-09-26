@@ -6,11 +6,14 @@ import type { SchoolRepository } from '../../../../domain/repositories/i-school.
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/school-name-already-exists.exception.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
+import { EnsureSchoolRootUseCase } from '../../../../../spaces/application/use-cases/commands/ensure-school-root/ensure-school-root.js';
+import type { UUID } from 'node:crypto';
 
 export class CreateSchoolUseCase {
   constructor(
     private readonly schools: SchoolRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly ensureSchoolRoot: EnsureSchoolRootUseCase,
   ) {}
 
   async handle(input: CreateSchoolInput): Promise<CreateSchoolOutput> {
@@ -43,6 +46,12 @@ export class CreateSchoolUseCase {
     const savedSchool = await this.schools.save(school);
     const primitives = savedSchool.toPrimitives();
     if (!primitives.id) throw new Error('Repository returned an unpersisted school');
+
+    // Ensure school root space is created
+    await this.ensureSchoolRoot.handle({
+      schoolId: primitives.id as UUID,
+      name: primitives.name,
+    });
 
     if (primitives.email) {
       this.eventEmitter.emit(

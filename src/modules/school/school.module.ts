@@ -23,6 +23,8 @@ import {
   type SchoolMembershipRepository,
 } from './domain/repositories/i-school-membership.repository.js';
 import { UserModule } from '../user/user.module.js';
+import { SpacesModule } from '../spaces/spaces.module.js';
+import { EnsureSchoolRootUseCase } from '../spaces/application/use-cases/commands/ensure-school-root/ensure-school-root.js';
 import { APP_FILTER } from '@nestjs/core';
 import { SchoolExceptionFilter } from './infrastructure/http/school-exception.filter.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
@@ -38,6 +40,7 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     ]),
     UserModule,
     AuthModule,
+    SpacesModule,
   ],
   controllers: [SchoolController],
   providers: [
@@ -55,9 +58,9 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     },
     {
       provide: CreateSchoolUseCase,
-      useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2) =>
-        new CreateSchoolUseCase(schools, eventEmitter),
-      inject: [SCHOOL_REPOSITORY, EventEmitter2],
+      useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2, ensureSchoolRoot: EnsureSchoolRootUseCase) =>
+        new CreateSchoolUseCase(schools, eventEmitter, ensureSchoolRoot),
+      inject: [SCHOOL_REPOSITORY, EventEmitter2, EnsureSchoolRootUseCase],
     },
     {
       provide: ToggleSchoolStatus,
