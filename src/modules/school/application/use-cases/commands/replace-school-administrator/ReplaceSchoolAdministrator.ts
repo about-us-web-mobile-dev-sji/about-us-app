@@ -6,6 +6,7 @@ import type { SchoolMembershipRepository } from '../../../../domain/repositories
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
+import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import { InvalidReplacementException } from '../../../../domain/exceptions/invalid-replacement.exception.js';
 import { SchoolAdministratorNotFoundException } from '../../../../domain/exceptions/school-administrator-not-found.exception.js';
@@ -76,12 +77,21 @@ export class ReplaceSchoolAdministratorUseCase {
     );
 
     if (existingMembership) {
+      if (existingMembership.status === MembershipStatus.REVOKED) {
+        throw new InvalidReplacementException(
+          'Cannot appoint a user whose school membership has been revoked; grant them a new invitation first',
+        );
+      }
+
       existingMembership.changeRole(MembershipRole.SCHOOL_ADMIN);
-      existingMembership.deactivate();
-      existingMembership = SchoolMembership.reconstitute({
-        ...existingMembership.toPrimitives(),
-        status: 'ACTIVE' as any,
-      });
+
+      if (existingMembership.status !== MembershipStatus.ACTIVE) {
+        existingMembership = SchoolMembership.reconstitute({
+          ...existingMembership.toPrimitives(),
+          status: MembershipStatus.ACTIVE,
+        });
+      }
+
       await this.memberships.save(existingMembership);
     } else {
       const newMembership = SchoolMembership.create({
