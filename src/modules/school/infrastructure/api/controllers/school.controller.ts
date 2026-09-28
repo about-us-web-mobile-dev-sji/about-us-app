@@ -26,7 +26,6 @@ import { ToggleSchoolStatus } from '../../../application/use-cases/commands/togg
 import { AcceptSchoolInvitation } from '../../../application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
 import { UpdateSchoolUseCase } from '../../../application/use-cases/commands/update-school/UpdateSchool.js';
 import { UpdateSchoolDto } from '../dto/update-school.dto.js';
-import { SchoolDetailDto } from '../dto/school-detail.dto.js';
 
 @Controller('schools')
 @UseGuards(AuthGuard, RolesGuard)
@@ -45,13 +44,6 @@ export class SchoolController {
   async findAll(): Promise<SchoolResponseDto[]> {
     const output = await this.listSchools.handle();
     return SchoolResponseDto.fromOutput(output);
-  }
-
-  @Get('managed')
-  @Roles(GlobalRole.SUPER_ADMIN)
-  async findAllManaged(): Promise<SchoolDetailDto[]> {
-    const output = await this.listSchools.handle();
-    return SchoolDetailDto.fromSchools(output);
   }
 
   @Post()
