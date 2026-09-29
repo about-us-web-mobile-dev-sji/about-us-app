@@ -121,6 +121,13 @@ export class SchoolMembership {
     this.props.status = MembershipStatus.ACTIVE;
   }
 
+  activate(): void {
+    if (this.props.status === MembershipStatus.REVOKED) {
+          throw new InvalidSchoolMembershipException('Cannot activate a revoked membership');
+    }
+    this.props.status = MembershipStatus.ACTIVE;
+  }
+
   changeRole(newRole: MembershipRole): void {
     this.props.role = newRole;
   }

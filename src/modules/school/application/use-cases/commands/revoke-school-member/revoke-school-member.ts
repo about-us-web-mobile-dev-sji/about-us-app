@@ -7,6 +7,7 @@ import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js'
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolMembershipNotFoundException } from '../../../../domain/exceptions/school-membership-not-found.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
+import { toSchoolMembershipOutput } from '../../school.output.js';
 
 export class RevokeSchoolMemberUseCase {
   constructor(private readonly memberships: SchoolMembershipRepository) {}
@@ -22,8 +23,7 @@ export class RevokeSchoolMemberUseCase {
       throw new InvalidSchoolMembershipException('PerformedBy is required');
     }
 
-    const isSuperAdmin =
-      input.performedByGlobalRole === GlobalRole.SUPER_ADMIN;
+    const isSuperAdmin = input.performedByGlobalRole === GlobalRole.SUPER_ADMIN;
 
     const performerMembership = await this.memberships.findBySchoolAndUser(
       input.schoolId,
@@ -67,6 +67,6 @@ export class RevokeSchoolMemberUseCase {
 
     const saved = await this.memberships.save(targetMembership);
 
-    return { membership: saved };
+    return { membership: toSchoolMembershipOutput(saved) };
   }
 }

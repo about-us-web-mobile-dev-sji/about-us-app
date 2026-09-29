@@ -1,4 +1,5 @@
 export interface AcceptSchoolInvitationInput {
   schoolId: string;
-  adminUserId: string;
+  token: string;
+  userId: string;
 }

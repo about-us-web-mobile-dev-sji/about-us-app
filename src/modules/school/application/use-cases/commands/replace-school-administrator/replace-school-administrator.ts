@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { ReplaceSchoolAdministratorInput } from './ReplaceSchoolAdministratorInput.js';
-import type { ReplaceSchoolAdministratorOutput } from './ReplaceSchoolAdministratorOutput.js';
+import type { ReplaceSchoolAdministratorInput } from './replace-school-administrator.input.js';
+import type { ReplaceSchoolAdministratorOutput } from './replace-school-administrator.output.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
@@ -48,63 +48,63 @@ export class ReplaceSchoolAdministratorUseCase {
       throw new SchoolAdministratorNotFoundException(input.newAdminUserId);
     }
 
-    const previousAdminUserId = school.adminUserId;
+    // The school's administrator is whoever holds a live SCHOOL_ADMIN
+    // membership; the school itself stores no admin reference.
+    const schoolMemberships = await this.memberships.findBySchool(
+      input.schoolId,
+    );
+    const currentAdmins = schoolMemberships.filter(
+      (m) =>
+        m.role === MembershipRole.SCHOOL_ADMIN &&
+        m.status !== MembershipStatus.REVOKED,
+    );
 
-    if (previousAdminUserId === input.newAdminUserId) {
+    if (
+      currentAdmins.some(
+        (m) =>
+          m.userId === input.newAdminUserId &&
+          m.status === MembershipStatus.ACTIVE,
+      )
+    ) {
       throw new InvalidReplacementException(
         'New admin is already the school administrator',
       );
     }
 
-    let membershipRevoked = false;
-
-    if (previousAdminUserId) {
-      const previousMembership = await this.memberships.findBySchoolAndUser(
-        input.schoolId,
-        previousAdminUserId,
+    // Validate everything before touching anything, so a refusal can't leave
+    // the school without an administrator.
+    const existingMembership = schoolMemberships.find(
+      (m) => m.userId === input.newAdminUserId,
+    );
+    if (existingMembership?.status === MembershipStatus.REVOKED) {
+      throw new InvalidReplacementException(
+        'Cannot appoint a user whose school membership has been revoked; grant them a new invitation first',
       );
-
-      if (previousMembership) {
-        previousMembership.revoke(input.performedBy);
-        await this.memberships.save(previousMembership);
-        membershipRevoked = true;
-      }
     }
 
-    let existingMembership = await this.memberships.findBySchoolAndUser(
-      input.schoolId,
-      input.newAdminUserId,
+    const previousAdmins = currentAdmins.filter(
+      (m) => m.userId !== input.newAdminUserId,
     );
+    for (const previous of previousAdmins) {
+      previous.revoke(input.performedBy);
+      await this.memberships.save(previous);
+    }
+    const previousAdminUserId = previousAdmins[0]?.userId ?? null;
 
     if (existingMembership) {
-      if (existingMembership.status === MembershipStatus.REVOKED) {
-        throw new InvalidReplacementException(
-          'Cannot appoint a user whose school membership has been revoked; grant them a new invitation first',
-        );
-      }
-
       existingMembership.changeRole(MembershipRole.SCHOOL_ADMIN);
-
-      if (existingMembership.status !== MembershipStatus.ACTIVE) {
-        existingMembership = SchoolMembership.reconstitute({
-          ...existingMembership.toPrimitives(),
-          status: MembershipStatus.ACTIVE,
-        });
-      }
-
+      existingMembership.activate();
       await this.memberships.save(existingMembership);
     } else {
-      const newMembership = SchoolMembership.create({
-        schoolId: input.schoolId,
-        userId: input.newAdminUserId,
-        role: MembershipRole.SCHOOL_ADMIN,
-        grantedBy: input.performedBy,
-      });
-      await this.memberships.save(newMembership);
+      await this.memberships.save(
+        SchoolMembership.create({
+          schoolId: input.schoolId,
+          userId: input.newAdminUserId,
+          role: MembershipRole.SCHOOL_ADMIN,
+          grantedBy: input.performedBy,
+        }),
+      );
     }
-
-    school.assignAdmin(input.newAdminUserId);
-    await this.schools.save(school);
 
     this.roleChanged({
       eventId: randomUUID(),
@@ -120,7 +120,7 @@ export class ReplaceSchoolAdministratorUseCase {
       schoolId: input.schoolId,
       previousAdminUserId,
       newAdminUserId: input.newAdminUserId,
-      membershipRevoked,
+      membershipRevoked: previousAdmins.length > 0,
       newMembershipCreated: !existingMembership,
     };
   }

@@ -4,5 +4,6 @@ export class InvitationSentEvent {
     public readonly schoolId: string,
     public readonly schoolName: string,
     public readonly sentAt: Date,
+    public readonly invitationToken: string,
   ) {}
 }

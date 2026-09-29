@@ -1,4 +1,4 @@
-import type { SendNotificationInput } from './SendNotificationInput.js';
+import type { SendNotificationInput } from './send-notification.input.js';
 import {
   Notification,
   severityFor,
@@ -16,7 +16,7 @@ import { isUUID } from 'class-validator';
 const payloadKeys: Record<NotificationType, string[]> = {
   [NotificationType.WELCOME]: ['firstName'],
   [NotificationType.SECURITY_ALERT]: ['status'],
-  [NotificationType.MEMBER_INVITED]: ['schoolName'],
+  [NotificationType.MEMBER_INVITED]: ['schoolName', 'invitationToken'],
   [NotificationType.MEMBER_JOINED]: ['schoolName'],
   [NotificationType.MEMBER_ROLE_CHANGED]: ['schoolName'],
 };
@@ -101,7 +101,7 @@ export class SendNotification {
           type: input.type,
           errorMessage: errorInstance.message,
           errorStack: errorInstance.stack,
-          originalError: e, // Permet de garder l'objet d'origine si votre logger le supporte
+          originalError: e,
         });
       }
     }
@@ -155,6 +155,13 @@ export class SendNotification {
       typeof input.payload.schoolName !== 'string'
     ) {
       throw new InvalidNotificationException('schoolName is required');
+    }
+
+    if (
+      input.type === NotificationType.MEMBER_INVITED &&
+      typeof input.payload.invitationToken !== 'string'
+    ) {
+      throw new InvalidNotificationException('invitationToken is required');
     }
   }
 }

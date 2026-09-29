@@ -7,6 +7,7 @@ import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js'
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolMembershipNotFoundException } from '../../../../domain/exceptions/school-membership-not-found.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
+import { toSchoolMembershipOutput } from '../../school.output.js';
 
 export class SuspendSchoolMemberUseCase {
   constructor(private readonly memberships: SchoolMembershipRepository) {}
@@ -61,6 +62,6 @@ export class SuspendSchoolMemberUseCase {
 
     const saved = await this.memberships.save(targetMembership);
 
-    return { membership: saved };
+    return { membership: toSchoolMembershipOutput(saved) };
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
-import { CancelSchoolMemberSuspensionUseCase } from './CancelSchoolMemberSuspension.js';
+import { CancelSchoolMemberSuspensionUseCase } from './cancel-school-member-suspension.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';

@@ -39,9 +39,6 @@ export class SchoolEntity {
   })
   status!: SchoolStatus;
 
-  @Column({ type: 'uuid', nullable: true, name: 'admin_user_id' })
-  adminUserId!: string | null;
-
   @Column({
     type: 'bigint',
     name: 'created_at',

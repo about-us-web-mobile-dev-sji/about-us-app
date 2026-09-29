@@ -1,5 +1,5 @@
-import type { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
+import type { SchoolMembershipOutput } from '../../school.output.js';
 
 export interface RevokeSchoolMemberOutput {
-  membership: SchoolMembership;
+  membership: SchoolMembershipOutput;
 }

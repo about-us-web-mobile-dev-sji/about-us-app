@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ArgumentsHost } from '@nestjs/common';
-import { CreateSchoolUseCase } from './CreateSchool.js';
+import { CreateSchoolUseCase } from './create-school.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
+import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/school-name-already-exists.exception.js';
 import { GlobalExceptionFilter } from '../../../../../../shared/infrastructure/http/global-exception.filter.js';
 
@@ -19,6 +20,7 @@ describe('CreateSchool error handling', () => {
   it('returns the expected conflict error through the shared contract', async () => {
     const useCase = new CreateSchoolUseCase(
       { findByName: vi.fn().mockResolvedValue({}) } as unknown as SchoolRepository,
+      {} as unknown as SchoolInvitationRepository,
       { emit: vi.fn() } as never,
     );
 
@@ -42,6 +44,7 @@ describe('CreateSchool error handling', () => {
       {
         findByName: vi.fn().mockRejectedValue(new Error('database password=secret')),
       } as unknown as SchoolRepository,
+      {} as unknown as SchoolInvitationRepository,
       { emit: vi.fn() } as never,
     );
 

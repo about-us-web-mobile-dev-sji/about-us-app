@@ -6,19 +6,26 @@ import { DatabaseModule } from '../../shared/infrastructure/database/database.mo
 import { AuthModule } from '../auth/auth.module.js';
 import { SchoolEntity } from './infrastructure/persistence/typeorm/school.entity.js';
 import { SchoolMembershipEntity } from './infrastructure/persistence/typeorm/school-membership.entity.js';
+import { SchoolInvitationEntity } from './infrastructure/persistence/typeorm/school-invitation.entity.js';
 import { TypeormSchoolRepository } from './infrastructure/persistence/typeorm-school.repository.js';
 import { TypeormSchoolMembershipRepository } from './infrastructure/persistence/typeorm-school-membership.repository.js';
-import { CreateSchoolUseCase } from './application/use-cases/commands/create-school/CreateSchool.js';
-import { ReplaceSchoolAdministratorUseCase } from './application/use-cases/commands/replace-school-administrator/ReplaceSchoolAdministrator.js';
-import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/ListSchools.js';
-import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/ToggleSchoolStatus.js';
-import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/AcceptSchoolInvitation.js';
+import { TypeormSchoolInvitationRepository } from './infrastructure/persistence/typeorm-school-invitation.repository.js';
+import { CreateSchoolUseCase } from './application/use-cases/commands/create-school/create-school.js';
+import { ReplaceSchoolAdministratorUseCase } from './application/use-cases/commands/replace-school-administrator/replace-school-administrator.js';
+import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/list-schools.js';
+import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/toggle-school-status.js';
+import { InviteSchoolMemberUseCase } from './application/use-cases/commands/invite-school-member/invite-school-member.js';
+import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-school-invitation/accept-school-invitation.js';
 import { SuspendSchoolMemberUseCase } from './application/use-cases/commands/suspend-school-member/suspend-school-member.js';
 import { CancelSchoolMemberSuspensionUseCase } from './application/use-cases/commands/cancel-school-member-suspension/cancel-school-member-suspension.js';
 import { RevokeSchoolMemberUseCase } from './application/use-cases/commands/revoke-school-member/revoke-school-member.js';
 import { SchoolController } from './infrastructure/api/controllers/school.controller.js';
+import { SchoolAdministrationController } from './infrastructure/api/controllers/school-administration.controller.js';
+import { SchoolInvitationController } from './infrastructure/api/controllers/school-invitation.controller.js';
+import { SchoolMemberController } from './infrastructure/api/controllers/school-member.controller.js';
 import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
 import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from './domain/repositories/i-school-membership.repository.js';
+import { SCHOOL_INVITATION_REPOSITORY, type SchoolInvitationRepository } from './domain/repositories/i-school-invitation.repository.js';
 import { UserModule } from '../user/user.module.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
@@ -29,12 +36,18 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     TypeOrmModule.forFeature([
       SchoolEntity,
       SchoolMembershipEntity,
+      SchoolInvitationEntity,
       MembershipEntity,
     ]),
     UserModule,
     AuthModule,
   ],
-  controllers: [SchoolController],
+  controllers: [
+    SchoolController,
+    SchoolAdministrationController,
+    SchoolInvitationController,
+    SchoolMemberController,
+  ],
   providers: [
     {
       provide: SCHOOL_REPOSITORY,
@@ -49,10 +62,19 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       inject: [getRepositoryToken(SchoolMembershipEntity)],
     },
     {
+      provide: SCHOOL_INVITATION_REPOSITORY,
+      useFactory: (repo: Repository<SchoolInvitationEntity>) =>
+        new TypeormSchoolInvitationRepository(repo),
+      inject: [getRepositoryToken(SchoolInvitationEntity)],
+    },
+    {
       provide: CreateSchoolUseCase,
-      useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2) =>
-        new CreateSchoolUseCase(schools, eventEmitter),
-      inject: [SCHOOL_REPOSITORY, EventEmitter2],
+      useFactory: (
+        schools: SchoolRepository,
+        invitations: SchoolInvitationRepository,
+        eventEmitter: EventEmitter2,
+      ) => new CreateSchoolUseCase(schools, invitations, eventEmitter),
+      inject: [SCHOOL_REPOSITORY, SCHOOL_INVITATION_REPOSITORY, EventEmitter2],
     },
     {
       provide: ToggleSchoolStatus,
@@ -90,10 +112,52 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
       inject: [SCHOOL_REPOSITORY],
     },
     {
+      provide: InviteSchoolMemberUseCase,
+      useFactory: (
+        schools: SchoolRepository,
+        invitations: SchoolInvitationRepository,
+        memberships: SchoolMembershipRepository,
+        users: UserAccountService,
+        eventEmitter: EventEmitter2,
+      ) =>
+        new InviteSchoolMemberUseCase(
+          schools,
+          invitations,
+          memberships,
+          users,
+          eventEmitter,
+        ),
+      inject: [
+        SCHOOL_REPOSITORY,
+        SCHOOL_INVITATION_REPOSITORY,
+        SCHOOL_MEMBERSHIP_REPOSITORY,
+        UserAccountService,
+        EventEmitter2,
+      ],
+    },
+    {
       provide: AcceptSchoolInvitation,
-      useFactory: (schools: SchoolRepository, eventEmitter: EventEmitter2) =>
-        new AcceptSchoolInvitation(schools, eventEmitter),
-      inject: [SCHOOL_REPOSITORY, EventEmitter2],
+      useFactory: (
+        schools: SchoolRepository,
+        invitations: SchoolInvitationRepository,
+        memberships: SchoolMembershipRepository,
+        users: UserAccountService,
+        eventEmitter: EventEmitter2,
+      ) =>
+        new AcceptSchoolInvitation(
+          schools,
+          invitations,
+          memberships,
+          users,
+          eventEmitter,
+        ),
+      inject: [
+        SCHOOL_REPOSITORY,
+        SCHOOL_INVITATION_REPOSITORY,
+        SCHOOL_MEMBERSHIP_REPOSITORY,
+        UserAccountService,
+        EventEmitter2,
+      ],
     },
     {
       provide: SuspendSchoolMemberUseCase,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ToggleSchoolStatus } from './ToggleSchoolStatus.js';
+import { ToggleSchoolStatus } from './toggle-school-status.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
@@ -10,14 +10,10 @@ describe('ToggleSchoolStatus', () => {
     id: '11111111-1111-4111-8111-111111111111',
     name: 'École test',
     address: null,
-    city: null,
-    postalCode: null,
-    country: null,
     phoneNumber: null,
     email: 'contact@ecole.test',
     website: null,
     status: SchoolStatus.ACTIVE,
-    adminUserId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     createdBy: 'admin',

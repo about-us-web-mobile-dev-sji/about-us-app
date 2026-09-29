@@ -9,8 +9,8 @@ import { TypeormEventLogRepository } from './infrastructure/persistence/typeorm-
 import { EventLogController } from './infrastructure/api/controllers/event-log.controller.js';
 import { ListEventLogs } from './application/usecases/queries/list-event-log/list-event-logs.js';
 import { GetEventLog } from './application/usecases/command/get-event-log/get-event-log.js';
-import { InvitationSentListener } from './invitation-sent.listener.js';
-import { InvitationAcceptedListener } from './invitation-accepted.listener.js';
+import { InvitationSentListener } from '../school/infrastructure/events/invitation-sent.listener.js';
+import { InvitationAcceptedListener } from '../school/infrastructure/events/invitation-accepted.listener.js';
 
 @Module({
   imports: [DatabaseModule, TypeOrmModule.forFeature([EventLogEntity])],

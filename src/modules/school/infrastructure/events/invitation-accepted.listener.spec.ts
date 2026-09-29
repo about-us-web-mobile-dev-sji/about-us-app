@@ -2,22 +2,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import type { INestApplication } from '@nestjs/common';
-import { InvitationSentListener } from './invitation-sent.listener.js';
-import { EventLogService } from './application/services/event-log.service.js';
-import { InvitationSentEvent } from './invitation-sent.event.js';
+import { InvitationAcceptedListener } from './invitation-accepted.listener.js';
+import { EventLogService } from '../../../event/application/services/event-log.service.js';
+import { InvitationAcceptedEvent } from './invitation-accepted.event.js';
 
-describe('InvitationSentListener', () => {
+describe('InvitationAcceptedListener', () => {
   let app: INestApplication;
   afterEach(async () => {
     await app?.close();
   });
 
-  it('records the event when an invitation is sent', async () => {
+  it('records the event when an invitation is accepted', async () => {
     const record = vi.fn().mockResolvedValue(undefined);
     const module = await Test.createTestingModule({
       imports: [EventEmitterModule.forRoot()],
       providers: [
-        InvitationSentListener,
+        InvitationAcceptedListener,
         { provide: EventLogService, useValue: { record } },
       ],
     }).compile();
@@ -26,11 +26,12 @@ describe('InvitationSentListener', () => {
 
     const emitter = app.get(EventEmitter2);
     await emitter.emitAsync(
-      'invitation.sent',
-      new InvitationSentEvent(
-        'admin@ecole.test',
+      'invitation.accepted',
+      new InvitationAcceptedEvent(
+        'a-inviter-id',
         '11111111-1111-4111-8111-111111111111',
         'École test',
+        '22222222-2222-4222-8222-222222222222',
         new Date('2026-09-12T10:00:00.000Z'),
       ),
     );
@@ -38,8 +39,8 @@ describe('InvitationSentListener', () => {
     expect(record).toHaveBeenCalledTimes(1);
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: 'invitation.sent',
-        message: 'Une invitation a été envoyée pour l\'école "École test" à "admin@ecole.test".',
+        name: 'invitation.accepted',
+        message: 'L\'invitation pour l\'école "École test" a été acceptée.',
         entityType: 'school',
         entityId: '11111111-1111-4111-8111-111111111111',
       }),
