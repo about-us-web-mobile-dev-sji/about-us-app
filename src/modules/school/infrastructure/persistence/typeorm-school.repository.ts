@@ -1,4 +1,4 @@
-import { Repository, QueryFailedError } from 'typeorm';
+import { In, Repository, QueryFailedError } from 'typeorm';
 import { SchoolEntity } from './typeorm/school.entity.js';
 import { School } from '../../domain/entities/school.entity.js';
 import type { SchoolRepository } from '../../domain/repositories/i-school.repository.js';
@@ -43,6 +43,14 @@ export class TypeormSchoolRepository implements SchoolRepository {
 
   async findAll(): Promise<School[]> {
     const entities = await this.repo.find();
+    return entities.map((entity) => SchoolMapper.toDomain(entity));
+  }
+
+  async findByIds(ids: string[]): Promise<School[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const entities = await this.repo.find({ where: { id: In(ids) } });
     return entities.map((entity) => SchoolMapper.toDomain(entity));
   }
 

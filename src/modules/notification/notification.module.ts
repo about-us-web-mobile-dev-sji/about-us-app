@@ -13,7 +13,7 @@ import {
 } from './domain/repositories/i-notification.repository.js';
 import { EMAIL_SENDER } from './application/gateways/i-email-sender.gateway.js';
 import { NOTIFICATION_TEMPLATES } from './application/gateways/i-notification-templates.gateway.js';
-import { SendNotification } from './application/use-cases/commands/send-notification/SendNotification.js';
+import { SendNotification } from './application/use-cases/commands/send-notification/send-notification.js';
 import { MarkNotificationRead } from './application/use-cases/commands/mark-notification-read/MarkNotificationRead.js';
 import { ListNotifications } from './application/use-cases/queries/list-notifications/ListNotifications.js';
 import { GetNotification } from './application/use-cases/queries/get-notification/GetNotification.js';

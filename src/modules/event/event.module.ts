@@ -9,8 +9,10 @@ import { TypeormEventLogRepository } from './infrastructure/persistence/typeorm-
 import { EventLogController } from './infrastructure/api/controllers/event-log.controller.js';
 import { ListEventLogs } from './application/usecases/queries/list-event-log/list-event-logs.js';
 import { GetEventLog } from './application/usecases/command/get-event-log/get-event-log.js';
-import { InvitationSentListener } from './invitation-sent.listener.js';
-import { InvitationAcceptedListener } from './invitation-accepted.listener.js';
+import { InvitationSentListener } from '../school/infrastructure/events/invitation-sent.listener.js';
+import { InvitationAcceptedListener } from '../school/infrastructure/events/invitation-accepted.listener.js';
+import { SchoolMemberRoleChangedListener } from '../school/infrastructure/events/school-member-role-changed.listener.js';
+import { SchoolMemberPermissionChangedListener } from '../school/infrastructure/events/school-member-permission-changed.listener.js';
 
 @Module({
   imports: [DatabaseModule, TypeOrmModule.forFeature([EventLogEntity])],
@@ -22,6 +24,8 @@ import { InvitationAcceptedListener } from './invitation-accepted.listener.js';
     EventLogListener,
     InvitationSentListener,
     InvitationAcceptedListener,
+    SchoolMemberRoleChangedListener,
+    SchoolMemberPermissionChangedListener,
     {
       provide: EVENT_LOG_REPOSITORY,
       useClass: TypeormEventLogRepository,

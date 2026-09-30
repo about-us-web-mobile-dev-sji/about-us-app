@@ -44,6 +44,14 @@ export class TypeormSchoolMembershipRepository
     return entities.map((e: SchoolMembershipEntity) => SchoolMembershipMapper.toDomain(e));
   }
 
+  async findActiveByUser(userId: string): Promise<SchoolMembership[]> {
+    const entities = await this.repo.findBy({
+      userId,
+      status: MembershipStatus.ACTIVE,
+    });
+    return entities.map((e: SchoolMembershipEntity) => SchoolMembershipMapper.toDomain(e));
+  }
+
   async save(membership: SchoolMembership): Promise<SchoolMembership> {
     const entity = SchoolMembershipMapper.toPersistence(membership);
     const saved = await this.repo.save(entity);

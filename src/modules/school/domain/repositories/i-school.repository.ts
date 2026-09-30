@@ -9,4 +9,5 @@ export interface SchoolRepository {
   existsByName(name: string): Promise<boolean>;
   save(school: School): Promise<School>;
   findAll(): Promise<School[]>;
+  findByIds(ids: string[]): Promise<School[]>;
 }

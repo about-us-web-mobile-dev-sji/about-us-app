@@ -1,8 +1,8 @@
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
 
 export class AcceptInvitationDto {
   @IsString()
   @IsNotEmpty()
-  @IsUUID()
-  adminUserId!: string;
+  @MaxLength(200)
+  token!: string;
 }
