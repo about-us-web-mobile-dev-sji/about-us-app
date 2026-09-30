@@ -6,7 +6,6 @@ export class SchoolMapper {
     return School.reconstitute({
       id: entity.id,
       name: entity.name,
-      address: entity.address,
       phoneNumber: entity.phoneNumber,
       email: entity.email,
       website: entity.website,
@@ -25,7 +24,6 @@ export class SchoolMapper {
       entity.id = primitives.id;
     }
     entity.name = primitives.name;
-    entity.address = primitives.address;
     entity.phoneNumber = primitives.phoneNumber;
     entity.email = primitives.email;
     entity.website = primitives.website;

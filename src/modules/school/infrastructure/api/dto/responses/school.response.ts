@@ -3,7 +3,6 @@ import type { SchoolOutput } from '../../../../application/use-cases/school.outp
 interface SchoolFields {
   id: string;
   name: string;
-  address: string | null;
   phoneNumber: string | null;
   email: string | null;
   website: string | null;
@@ -16,7 +15,6 @@ interface SchoolFields {
 export class SchoolResponse {
   id!: string;
   name!: string;
-  address!: string | null;
   phoneNumber!: string | null;
   email!: string | null;
   website!: string | null;
@@ -29,7 +27,6 @@ export class SchoolResponse {
     return {
       id: p.id,
       name: p.name,
-      address: p.address,
       phoneNumber: p.phoneNumber,
       email: p.email,
       website: p.website,

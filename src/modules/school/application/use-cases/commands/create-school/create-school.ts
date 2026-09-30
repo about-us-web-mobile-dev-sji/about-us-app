@@ -34,7 +34,6 @@ export class CreateSchoolUseCase {
 
     const school = School.create({
       name: input.name,
-      address: input.address,
       phoneNumber: input.phoneNumber,
       email: input.email,
       website: input.website,
@@ -69,7 +68,6 @@ export class CreateSchoolUseCase {
     return {
       id: primitives.id as `${string}-${string}-${string}-${string}-${string}`,
       name: primitives.name,
-      address: primitives.address,
       phoneNumber: primitives.phoneNumber,
       email: primitives.email,
       website: primitives.website,
