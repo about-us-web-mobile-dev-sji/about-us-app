@@ -1,4 +1,4 @@
-import type { ListSchoolsOutput } from '../../../application/use-cases/queries/list-schools/list-schools.output.js';
+import type { ListSchoolsOutput } from '../../../../application/use-cases/queries/list-schools/list-schools.output.js';
 
 export class SchoolResponseDto {
   id: string | undefined;

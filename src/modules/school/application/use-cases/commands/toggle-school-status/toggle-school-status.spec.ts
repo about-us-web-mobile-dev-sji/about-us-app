@@ -32,6 +32,7 @@ describe('ToggleSchoolStatus', () => {
           stored = school;
           return school;
         },
+        findByIds: async () => [],
         findAll: async () => [stored],
       },
       stored: () => stored,

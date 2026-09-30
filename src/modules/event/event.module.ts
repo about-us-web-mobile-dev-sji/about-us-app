@@ -11,6 +11,8 @@ import { ListEventLogs } from './application/usecases/queries/list-event-log/lis
 import { GetEventLog } from './application/usecases/command/get-event-log/get-event-log.js';
 import { InvitationSentListener } from '../school/infrastructure/events/invitation-sent.listener.js';
 import { InvitationAcceptedListener } from '../school/infrastructure/events/invitation-accepted.listener.js';
+import { SchoolMemberRoleChangedListener } from '../school/infrastructure/events/school-member-role-changed.listener.js';
+import { SchoolMemberPermissionChangedListener } from '../school/infrastructure/events/school-member-permission-changed.listener.js';
 
 @Module({
   imports: [DatabaseModule, TypeOrmModule.forFeature([EventLogEntity])],
@@ -22,6 +24,8 @@ import { InvitationAcceptedListener } from '../school/infrastructure/events/invi
     EventLogListener,
     InvitationSentListener,
     InvitationAcceptedListener,
+    SchoolMemberRoleChangedListener,
+    SchoolMemberPermissionChangedListener,
     {
       provide: EVENT_LOG_REPOSITORY,
       useClass: TypeormEventLogRepository,

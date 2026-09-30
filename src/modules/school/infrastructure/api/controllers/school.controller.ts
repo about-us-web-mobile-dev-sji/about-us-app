@@ -3,8 +3,10 @@ import { CreateSchoolDto } from '../dto/create-school.dto.js';
 import { RolesGuard } from '../../../../auth/infrastructure/api/guard/roles.guard.js';
 import { CreateSchoolUseCase } from '../../../application/use-cases/commands/create-school/create-school.js';
 import { ListSchoolsUseCase } from '../../../application/use-cases/queries/list-schools/list-schools.js';
+import { Roles } from '../../../../auth/infrastructure/api/decorators/roles.decorator.js';
+import { GlobalRole } from '../../../../user/domain/enum/global-role.enum.js';
 import { AuthGuard, type AuthenticatedRequest } from '../../../../auth/infrastructure/api/guard/auth.guard.js';
-import { SchoolResponseDto } from '../dto/school-response.dto.js';
+import { SchoolResponseDto } from '../dto/responses/school-response.dto.js';
 import { SchoolResponse } from '../dto/responses/school.response.js';
 
 @Controller('schools')
@@ -18,14 +20,21 @@ export class SchoolController {
   
 
   @Get()
-  @UseGuards(AuthGuard)
-  async findAll(): Promise<SchoolResponseDto[]> {
-    const output = await this.listSchools.handle();
+  async findAll(@Req() req: AuthenticatedRequest): Promise<SchoolResponseDto[]> {
+    const userId = req.auth.subjectId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    const output = await this.listSchools.handle({
+      userId,
+      globalRole: req.auth.user.globalRole,
+    });
     return SchoolResponseDto.fromOutput(output);
   }
 
   @Post()
-  @UseGuards(AuthGuard)
+  @Roles(GlobalRole.SUPER_ADMIN)
   async create(@Body() dto: CreateSchoolDto, @Req() req: AuthenticatedRequest) {
     const userId = req.auth.subjectId;
 

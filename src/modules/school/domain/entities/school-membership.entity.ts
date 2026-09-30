@@ -1,6 +1,8 @@
 import { MembershipRole } from '../enums/membership-role.enum.js';
 import { MembershipStatus } from '../enums/membership-status.enum.js';
+import { SchoolAction } from '../enums/school-action.enum.js';
 import { InvalidSchoolMembershipException } from '../exceptions/invalid-school-membership.exception.js';
+import { isGrantableAction } from '../policies/school-role-permissions.js';
 
 export interface SchoolMembershipProps {
   id: string;
@@ -12,7 +14,13 @@ export interface SchoolMembershipProps {
   grantedAt: Date;
   revokedAt: Date | null;
   revokedBy: string | null;
+  grantedPermissions: SchoolAction[];
 }
+
+// Rows written before delegation existed carry no grantedPermissions.
+export type SchoolMembershipSnapshot = Omit<SchoolMembershipProps, 'grantedPermissions'> & {
+  grantedPermissions?: readonly SchoolAction[];
+};
 
 export class SchoolMembership {
   private constructor(private props: SchoolMembershipProps) {}
@@ -45,11 +53,17 @@ export class SchoolMembership {
       grantedAt: now,
       revokedAt: null,
       revokedBy: null,
+      grantedPermissions: [],
     });
   }
 
-  static reconstitute(props: SchoolMembershipProps): SchoolMembership {
-    return new SchoolMembership(structuredClone(props));
+  static reconstitute(props: SchoolMembershipSnapshot): SchoolMembership {
+    return new SchoolMembership(
+      structuredClone({
+        ...props,
+        grantedPermissions: [...(props.grantedPermissions ?? [])],
+      }),
+    );
   }
 
   get id(): string {
@@ -86,6 +100,10 @@ export class SchoolMembership {
 
   get revokedBy(): string | null {
     return this.props.revokedBy;
+  }
+
+  get grantedPermissions(): readonly SchoolAction[] {
+    return [...this.props.grantedPermissions];
   }
 
   revoke(revokedBy: string): void {
@@ -129,7 +147,48 @@ export class SchoolMembership {
   }
 
   changeRole(newRole: MembershipRole): void {
+    if (this.props.status === MembershipStatus.REVOKED) {
+      throw new InvalidSchoolMembershipException('Cannot change the role of a revoked membership');
+    }
+    if (this.props.role === newRole) {
+      throw new InvalidSchoolMembershipException('Membership already has this role');
+    }
     this.props.role = newRole;
+    // Delegated rights belong to the previous role: start clean.
+    this.props.grantedPermissions = [];
+  }
+
+  // Returns false when the permission was already held (idempotent).
+  grantPermission(action: SchoolAction): boolean {
+    this.assertPermissionsEditable(action);
+    if (this.props.grantedPermissions.includes(action)) {
+      return false;
+    }
+    this.props.grantedPermissions.push(action);
+    return true;
+  }
+
+  // Returns false when the permission was not held (idempotent).
+  revokePermission(action: SchoolAction): boolean {
+    this.assertPermissionsEditable(action);
+    const index = this.props.grantedPermissions.indexOf(action);
+    if (index === -1) {
+      return false;
+    }
+    this.props.grantedPermissions.splice(index, 1);
+    return true;
+  }
+
+  private assertPermissionsEditable(action: SchoolAction): void {
+    if (!isGrantableAction(action)) {
+      throw new InvalidSchoolMembershipException(`Action ${String(action)} cannot be delegated`);
+    }
+    if (this.props.status !== MembershipStatus.ACTIVE) {
+      throw new InvalidSchoolMembershipException('Permissions can only be managed on an active membership');
+    }
+    if (this.props.role === MembershipRole.SCHOOL_ADMIN) {
+      throw new InvalidSchoolMembershipException('A school administrator already holds every school permission');
+    }
   }
 
   toPrimitives(): SchoolMembershipProps {

@@ -10,8 +10,18 @@ export class MembershipResponse {
   grantedAt!: Date;
   revokedAt!: Date | null;
   revokedBy!: string | null;
+  grantedPermissions!: string[];
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 
-  static fromOutput(output: SchoolMembershipOutput): MembershipResponse {
+  static fromOutput(
+    output: SchoolMembershipOutput & {
+      email?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+    },
+  ): MembershipResponse {
     return {
       id: output.id,
       schoolId: output.schoolId,
@@ -22,6 +32,10 @@ export class MembershipResponse {
       grantedAt: output.grantedAt,
       revokedAt: output.revokedAt,
       revokedBy: output.revokedBy,
+      grantedPermissions: output.grantedPermissions,
+      ...(output.email !== undefined && { email: output.email }),
+      ...(output.firstName !== undefined && { firstName: output.firstName }),
+      ...(output.lastName !== undefined && { lastName: output.lastName }),
     };
   }
 }

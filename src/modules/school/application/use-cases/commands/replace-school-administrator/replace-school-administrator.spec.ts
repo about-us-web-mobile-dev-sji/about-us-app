@@ -58,6 +58,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       findById: async (id) => stored.find((m) => m.id === id) ?? null,
       findBySchoolAndUser: async (s, u) =>
         stored.find((m) => m.schoolId === s && m.userId === u) ?? null,
+      findActiveByUser: async () => [],
       findActiveAdminBySchool: async () => null,
       findBySchool: async (s) => stored.filter((m) => m.schoolId === s),
       save: async (m) => {

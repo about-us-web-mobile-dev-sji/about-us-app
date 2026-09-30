@@ -92,7 +92,9 @@ export class ReplaceSchoolAdministratorUseCase {
     const previousAdminUserId = previousAdmins[0]?.userId ?? null;
 
     if (existingMembership) {
-      existingMembership.changeRole(MembershipRole.SCHOOL_ADMIN);
+      if (existingMembership.role !== MembershipRole.SCHOOL_ADMIN) {
+        existingMembership.changeRole(MembershipRole.SCHOOL_ADMIN);
+      }
       existingMembership.activate();
       await this.memberships.save(existingMembership);
     } else {

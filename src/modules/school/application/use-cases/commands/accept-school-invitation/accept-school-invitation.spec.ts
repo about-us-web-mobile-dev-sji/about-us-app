@@ -113,6 +113,7 @@ describe('AcceptSchoolInvitation', () => {
       findBySchoolAndUser: async (sId, userId) =>
         memberships.find((m) => m.schoolId === sId && m.userId === userId) ??
         null,
+      findActiveByUser: async () => [],
       findActiveAdminBySchool: async (sId) =>
         memberships.find(
           (m) =>

@@ -1,15 +1,16 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InvitationSentEvent } from '../../../../infrastructure/events/invitation-sent.event.js';
-import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 import { SchoolInvitation } from '../../../../domain/entities/school-invitation.entity.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
+import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolAdministratorAlreadyAssignedException } from '../../../../domain/exceptions/school-administrator-already-assigned.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
+import type { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
@@ -27,6 +28,7 @@ export class InviteSchoolMemberUseCase {
     private readonly memberships: SchoolMembershipRepository,
     private readonly users: UserAccountService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly authorization: SchoolAuthorizationService,
   ) {}
 
   async handle(
@@ -56,31 +58,20 @@ export class InviteSchoolMemberUseCase {
       );
     }
 
-    // A super admin may invite into any school; a school admin only into the
-    // school where they are an active administrator.
-    const isSuperAdmin = input.performedByGlobalRole === GlobalRole.SUPER_ADMIN;
+    await this.authorization.assertCan(
+      { userId: input.performedBy, globalRole: input.performedByGlobalRole },
+      role === MembershipRole.SCHOOL_ADMIN
+        ? SchoolAction.INVITE_ADMIN
+        : SchoolAction.INVITE_MEMBER,
+      input.schoolId,
+    );
+
     const schoolMemberships = await this.memberships.findBySchool(
       input.schoolId,
     );
-    const performer = schoolMemberships.find(
-      (m) => m.userId === input.performedBy,
-    );
-    const isActiveSchoolAdmin =
-      !!performer &&
-      performer.role === MembershipRole.SCHOOL_ADMIN &&
-      performer.status === MembershipStatus.ACTIVE;
 
-    if (!isSuperAdmin && !isActiveSchoolAdmin) {
-      throw new SchoolMembershipActionForbiddenException();
-    }
-
-    // Appointing an administrator stays a super admin decision.
+    // Only one administrator per school.
     if (role === MembershipRole.SCHOOL_ADMIN) {
-      if (!isSuperAdmin) {
-        throw new SchoolMembershipActionForbiddenException(
-          'Only a super administrator can invite a school administrator',
-        );
-      }
       const hasAdmin = schoolMemberships.some(
         (m) =>
           m.role === MembershipRole.SCHOOL_ADMIN &&

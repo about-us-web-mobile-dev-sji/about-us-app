@@ -6,6 +6,7 @@ import { SchoolMembership } from '../../../../domain/entities/school-membership.
 import { InvitationStatus } from '../../../../domain/enums/invitation-status.enum.js';
 import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
+import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
@@ -13,6 +14,7 @@ import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/
 import { SchoolAdministratorAlreadyAssignedException } from '../../../../domain/exceptions/school-administrator-already-assigned.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
+import { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
@@ -100,6 +102,8 @@ describe('InviteSchoolMemberUseCase', () => {
     const all = o.memberships ?? [];
     const membershipRepo = {
       findBySchool: async (sId: string) => all.filter((m) => m.schoolId === sId),
+      findBySchoolAndUser: async (sId: string, uId: string) =>
+        all.find((m) => m.schoolId === sId && m.userId === uId) ?? null,
     } as unknown as SchoolMembershipRepository;
 
     const accounts = o.accounts ?? {};
@@ -117,6 +121,7 @@ describe('InviteSchoolMemberUseCase', () => {
         membershipRepo,
         users,
         emitter as never,
+        new SchoolAuthorizationService(membershipRepo, schools),
       ),
       emitter,
       invitations: () => invitations,
@@ -204,6 +209,21 @@ describe('InviteSchoolMemberUseCase', () => {
       role: MembershipRole.SCHOOL_ADMIN,
     });
     expect(invitation.role).toBe(MembershipRole.SCHOOL_ADMIN);
+  });
+
+  it('lets an INVITE_MEMBER delegate invite a member but never a SCHOOL_ADMIN', async () => {
+    const delegate = SchoolMembership.reconstitute({
+      ...membership(memberId, MembershipRole.SCHOOL_MEMBER).toPrimitives(),
+      grantedPermissions: [SchoolAction.INVITE_MEMBER],
+    });
+    const ctx = setup({ memberships: [schoolAdmin(), delegate] });
+    const asDelegate = { ...base, performedBy: memberId };
+
+    await expect(ctx.useCase.handle({ ...asDelegate, role: MembershipRole.SCHOOL_ADMIN })).rejects.toBeInstanceOf(
+      SchoolMembershipActionForbiddenException,
+    );
+    const { invitation } = await ctx.useCase.handle({ ...asDelegate, role: MembershipRole.SCHOOL_MEMBER });
+    expect(invitation.role).toBe(MembershipRole.SCHOOL_MEMBER);
   });
 
   it('refuses an administrator invitation when the school already has an administrator', async () => {

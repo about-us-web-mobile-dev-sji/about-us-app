@@ -1,16 +1,17 @@
 import type { SuspendSchoolMemberInput } from './suspend-school-member.input.js';
 import type { SuspendSchoolMemberOutput } from './suspend-school-member.output.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
-import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
-import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
+import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
+import type { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolMembershipNotFoundException } from '../../../../domain/exceptions/school-membership-not-found.exception.js';
-import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { toSchoolMembershipOutput } from '../../school.output.js';
 
 export class SuspendSchoolMemberUseCase {
-  constructor(private readonly memberships: SchoolMembershipRepository) {}
+  constructor(
+    private readonly memberships: SchoolMembershipRepository,
+    private readonly authorization: SchoolAuthorizationService,
+  ) {}
 
   async handle(input: SuspendSchoolMemberInput): Promise<SuspendSchoolMemberOutput> {
     if (!input.schoolId?.trim()) {
@@ -23,33 +24,29 @@ export class SuspendSchoolMemberUseCase {
       throw new InvalidSchoolMembershipException('PerformedBy is required');
     }
 
-    const isSuperAdmin =
-      input.performedByGlobalRole === GlobalRole.SUPER_ADMIN;
+    const actor = {
+      userId: input.performedBy,
+      globalRole: input.performedByGlobalRole,
+    };
+    await this.authorization.assertCan(actor, SchoolAction.SUSPEND_MEMBER, input.schoolId);
+    await this.authorization.assertSchoolWritable(actor, input.schoolId);
 
-    const performerMembership = await this.memberships.findBySchoolAndUser(
+    const targetMembership = await this.memberships.findBySchoolAndUser(
       input.schoolId,
-      input.performedBy,
+      input.memberUserId,
     );
-
-    const isActiveSchoolAdmin =
-      !!performerMembership &&
-      performerMembership.role === MembershipRole.SCHOOL_ADMIN &&
-      performerMembership.status === MembershipStatus.ACTIVE;
-
-    if (!isSuperAdmin && !isActiveSchoolAdmin) {
-      throw new SchoolMembershipActionForbiddenException();
-    }
+    await this.authorization.assertCanManageTarget(
+      actor,
+      input.schoolId,
+      input.memberUserId,
+      targetMembership,
+    );
 
     if (input.memberUserId === input.performedBy) {
       throw new InvalidSchoolMembershipException(
         'An administrator cannot suspend themselves',
       );
     }
-
-    const targetMembership = await this.memberships.findBySchoolAndUser(
-      input.schoolId,
-      input.memberUserId,
-    );
 
     if (!targetMembership) {
       throw new SchoolMembershipNotFoundException(

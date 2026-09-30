@@ -39,6 +39,7 @@ export class SchoolAdministrationController {
   }
 
   @Patch(':id/toggle-block')
+  @Roles(GlobalRole.SUPER_ADMIN)
   async toggleBlock(@Param('id') id: string) {
     const output = await this.toggleStatus.handle({ schoolId: id });
     return SchoolResponse.fromOutput(output.school);

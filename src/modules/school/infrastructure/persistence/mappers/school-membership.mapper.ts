@@ -13,6 +13,7 @@ export class SchoolMembershipMapper {
       grantedAt: new Date(entity.grantedAt),
       revokedAt: entity.revokedAt ? new Date(entity.revokedAt) : null,
       revokedBy: entity.revokedBy,
+      grantedPermissions: entity.grantedPermissions ?? [],
     });
   }
 
@@ -33,6 +34,7 @@ export class SchoolMembershipMapper {
       ? primitives.revokedAt.getTime()
       : null;
     entity.revokedBy = primitives.revokedBy;
+    entity.grantedPermissions = primitives.grantedPermissions;
 
     return entity;
   }
