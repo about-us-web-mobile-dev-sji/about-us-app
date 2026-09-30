@@ -8,7 +8,6 @@ import type { SchoolStatus } from '../../domain/enums/school-status.enum.js';
 export interface SchoolOutput {
   id: string;
   name: string;
-  address: string | null;
   phoneNumber: string | null;
   email: string | null;
   website: string | null;
