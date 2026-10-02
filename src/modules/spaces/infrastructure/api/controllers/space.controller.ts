@@ -77,6 +77,14 @@ export class SpaceController {
     return this.ensureSchoolRootUseCase.handle({ schoolId: dto.schoolId as UUID, name: dto.name });
   }
 
+  @Get('school/:schoolId/tree')
+  @ApiOperation({ summary: 'Get full school space tree' })
+  @ApiResponse({ status: 200, type: [SpaceResponseDto] })
+  async getSchoolTree(@Param('schoolId') schoolId: string) {
+    const result = await this.getSchoolTreeUseCase.handle(schoolId as UUID);
+    return result.items.map(SpaceResponseDto.fromDomain);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get space by ID' })
   @ApiResponse({ status: 200, type: SpaceResponseDto })
@@ -118,14 +126,6 @@ export class SpaceController {
   @ApiResponse({ status: 200, type: [SpaceResponseDto] })
   async getPathToRoot(@Param('id') id: string) {
     const result = await this.getPathToRootUseCase.handle(id as UUID);
-    return result.items.map(SpaceResponseDto.fromDomain);
-  }
-
-  @Get('school/:schoolId/tree')
-  @ApiOperation({ summary: 'Get full school space tree' })
-  @ApiResponse({ status: 200, type: [SpaceResponseDto] })
-  async getSchoolTree(@Param('schoolId') schoolId: string) {
-    const result = await this.getSchoolTreeUseCase.handle(schoolId as UUID);
     return result.items.map(SpaceResponseDto.fromDomain);
   }
 

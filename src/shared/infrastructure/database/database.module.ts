@@ -36,6 +36,15 @@ import databaseConfig from '../../../config/data-base.config.js';
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS school');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS notification');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS spaces');
+
+            // Ancienne contrainte (schoolId, kind) bloquait plusieurs STANDARD par école.
+            await dataSource.query(
+              'ALTER TABLE IF EXISTS spaces.spaces DROP CONSTRAINT IF EXISTS uq_spaces_school_kind_root',
+            );
+            await dataSource.query(
+              'DROP INDEX IF EXISTS spaces.uq_spaces_school_kind_root',
+            );
+
             await dataSource.synchronize();
           }
           return dataSource;
