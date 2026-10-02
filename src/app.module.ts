@@ -7,6 +7,7 @@ import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { SchoolModule } from './modules/school/school.module.js';
+import { SpacesModule } from './modules/spaces/spaces.module.js';
 import superAdminConfig from './config/super-admin.config.js';
 import databaseConfig from './config/data-base.config.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -33,6 +34,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UserModule,
     AuthModule,
     SchoolModule,
+    SpacesModule,
     EventModule,
     NotificationModule,
 

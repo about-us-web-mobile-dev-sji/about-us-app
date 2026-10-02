@@ -36,6 +36,11 @@ import { GetMySchoolPermissionsUseCase } from './application/use-cases/queries/g
 import { UserModule } from '../user/user.module.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
+import { SpacesModule } from '../spaces/spaces.module.js';
+import {
+  SPACE_REPOSITORY,
+  type SpaceRepository,
+} from '../spaces/domain/repositories/i-space.repository.js';
 
 @Module({
   imports: [
@@ -48,6 +53,7 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     ]),
     UserModule,
     AuthModule,
+    SpacesModule,
   ],
   controllers: [
     SchoolController,
@@ -85,9 +91,9 @@ import { MembershipEntity } from './infrastructure/persistence/typeorm/membershi
     },
     {
       provide: ToggleSchoolStatus,
-      useFactory: (schools: SchoolRepository) =>
-        new ToggleSchoolStatus(schools),
-      inject: [SCHOOL_REPOSITORY],
+      useFactory: (schools: SchoolRepository, spaces: SpaceRepository) =>
+        new ToggleSchoolStatus(schools, spaces),
+      inject: [SCHOOL_REPOSITORY, SPACE_REPOSITORY],
     },
     {
       provide: ReplaceSchoolAdministratorUseCase,

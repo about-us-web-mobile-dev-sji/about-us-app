@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { UserModule } from '../user/user.module.js';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
@@ -45,8 +46,8 @@ import {
   SPACE_AUTHORIZATION_GATEWAY,
   type SpaceAuthorizationGateway,
 } from './application/ports/space-authorization.gateway.js';
-import type { SpaceAuthorizationGateway as SpaceAuthorizationGatewayType } from './application/ports/space-authorization.gateway.js';
 import { SpaceAuthorizationGatewayImpl } from './infrastructure/services/space-authorization.gateway.js';
+import { UserAccountService } from '../user/application/user-account.service.js';
 import { APP_FILTER } from '@nestjs/core';
 import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filter.js';
 
@@ -55,6 +56,7 @@ import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filte
     DatabaseModule,
     TypeOrmModule.forFeature([SpaceEntity, SpaceMembershipEntity]),
     AuthModule,
+    UserModule,
   ],
   controllers: [SpaceController, SpaceMembershipController, SpaceDesignationController],
   exports: [
@@ -66,6 +68,7 @@ import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filte
     GetSubtreeUseCase,
     GetPathToRootUseCase,
     GetSchoolTreeUseCase,
+    SPACE_REPOSITORY,
   ],
   providers: [
     {
@@ -81,8 +84,16 @@ import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filte
       inject: [getRepositoryToken(SpaceMembershipEntity)],
     },
     {
+      provide: CanManageUseCase,
+      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository) =>
+        new CanManageUseCase(spaces, memberships),
+      inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY],
+    },
+    {
       provide: SPACE_AUTHORIZATION_GATEWAY,
-      useClass: SpaceAuthorizationGatewayImpl,
+      useFactory: (canManage: CanManageUseCase, users: UserAccountService) =>
+        new SpaceAuthorizationGatewayImpl(canManage, users),
+      inject: [CanManageUseCase, UserAccountService],
     },
     {
       provide: EnsureSchoolRootUseCase,
@@ -91,67 +102,83 @@ import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filte
     },
     {
       provide: CreateSpaceUseCase,
-      useFactory: (spaces: SpaceRepository, auth: any) =>
+      useFactory: (spaces: SpaceRepository, auth: SpaceAuthorizationGateway) =>
         new CreateSpaceUseCase(spaces, auth),
       inject: [SPACE_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: InsertParentUseCase,
-      useFactory: (spaces: SpaceRepository, auth: any, dataSource: DataSource) =>
+      useFactory: (spaces: SpaceRepository, auth: SpaceAuthorizationGateway, dataSource: DataSource) =>
         new InsertParentUseCase(spaces, auth, dataSource),
       inject: [SPACE_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY, DataSource],
     },
     {
       provide: MoveSpaceUseCase,
-      useFactory: (spaces: SpaceRepository, auth: any, dataSource: DataSource) =>
+      useFactory: (spaces: SpaceRepository, auth: SpaceAuthorizationGateway, dataSource: DataSource) =>
         new MoveSpaceUseCase(spaces, auth, dataSource),
       inject: [SPACE_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY, DataSource],
     },
     {
       provide: ArchiveSpaceUseCase,
-      useFactory: (spaces: SpaceRepository, auth: any) =>
+      useFactory: (spaces: SpaceRepository, auth: SpaceAuthorizationGateway) =>
         new ArchiveSpaceUseCase(spaces, auth),
       inject: [SPACE_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: RestoreSpaceUseCase,
-      useFactory: (spaces: SpaceRepository, auth: any) =>
+      useFactory: (spaces: SpaceRepository, auth: SpaceAuthorizationGateway) =>
         new RestoreSpaceUseCase(spaces, auth),
       inject: [SPACE_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: DeleteSpaceUseCase,
-      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository, auth: any, dataSource: DataSource) =>
-        new DeleteSpaceUseCase(spaces, memberships, auth, dataSource),
+      useFactory: (
+        spaces: SpaceRepository,
+        memberships: SpaceMembershipRepository,
+        auth: SpaceAuthorizationGateway,
+        dataSource: DataSource,
+      ) => new DeleteSpaceUseCase(spaces, memberships, auth, dataSource),
       inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY, DataSource],
     },
     {
       provide: AddMemberUseCase,
-      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository, auth: any) =>
-        new AddMemberUseCase(spaces, memberships, auth),
+      useFactory: (
+        spaces: SpaceRepository,
+        memberships: SpaceMembershipRepository,
+        auth: SpaceAuthorizationGateway,
+      ) => new AddMemberUseCase(spaces, memberships, auth),
       inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: RemoveMemberUseCase,
-      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository, auth: any) =>
-        new RemoveMemberUseCase(spaces, memberships, auth),
+      useFactory: (
+        spaces: SpaceRepository,
+        memberships: SpaceMembershipRepository,
+        auth: SpaceAuthorizationGateway,
+      ) => new RemoveMemberUseCase(spaces, memberships, auth),
       inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: AssignManagerUseCase,
-      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository, auth: any) =>
-        new AssignManagerUseCase(spaces, memberships, auth),
+      useFactory: (
+        spaces: SpaceRepository,
+        memberships: SpaceMembershipRepository,
+        auth: SpaceAuthorizationGateway,
+      ) => new AssignManagerUseCase(spaces, memberships, auth),
       inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: RemoveManagerUseCase,
-      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository, auth: any) =>
-        new RemoveManagerUseCase(spaces, memberships, auth),
+      useFactory: (
+        spaces: SpaceRepository,
+        memberships: SpaceMembershipRepository,
+        auth: SpaceAuthorizationGateway,
+      ) => new RemoveManagerUseCase(spaces, memberships, auth),
       inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
     {
       provide: UpdateMemberDesignationUseCase,
-      useFactory: (spaces: SpaceRepository, auth: any) =>
+      useFactory: (spaces: SpaceRepository, auth: SpaceAuthorizationGateway) =>
         new UpdateMemberDesignationUseCase(spaces, auth),
       inject: [SPACE_REPOSITORY, SPACE_AUTHORIZATION_GATEWAY],
     },
@@ -196,12 +223,6 @@ import { SpaceExceptionFilter } from './infrastructure/api/space-exception.filte
       provide: GetEffectiveManagersUseCase,
       useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository) =>
         new GetEffectiveManagersUseCase(spaces, memberships),
-      inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY],
-    },
-    {
-      provide: CanManageUseCase,
-      useFactory: (spaces: SpaceRepository, memberships: SpaceMembershipRepository) =>
-        new CanManageUseCase(spaces, memberships),
       inject: [SPACE_REPOSITORY, SPACE_MEMBERSHIP_REPOSITORY],
     },
     {
