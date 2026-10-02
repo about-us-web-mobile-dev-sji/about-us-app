@@ -19,6 +19,10 @@ import { GlobalExceptionFilter } from './shared/infrastructure/http/global-excep
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
+const observeEnabled =
+  process.env.OBSERVE_APP_KEY !== undefined &&
+  process.env.OBSERVE_APP_SECRET !== undefined;
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -36,11 +40,15 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     EventModule,
     NotificationModule,
 
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'about-us',
-    }),
+    ...(observeEnabled
+      ? [
+          ObserveModule.forRoot({
+            appKey: process.env.OBSERVE_APP_KEY!,
+            appSecret: process.env.OBSERVE_APP_SECRET!,
+            serviceId: 'about-us',
+          }),
+        ]
+      : []),
   ],
 
   controllers: [AppController],
