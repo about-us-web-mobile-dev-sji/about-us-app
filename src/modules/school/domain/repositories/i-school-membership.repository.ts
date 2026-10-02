@@ -7,5 +7,6 @@ export interface SchoolMembershipRepository {
   findBySchoolAndUser(schoolId: string, userId: string): Promise<SchoolMembership | null>;
   findActiveAdminBySchool(schoolId: string): Promise<SchoolMembership | null>;
   findBySchool(schoolId: string): Promise<SchoolMembership[]>;
+  findActiveByUser(userId: string): Promise<SchoolMembership[]>;
   save(membership: SchoolMembership): Promise<SchoolMembership>;
 }

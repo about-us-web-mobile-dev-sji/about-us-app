@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { UpdateSchoolUseCase } from './UpdateSchool.js';
+import { UpdateSchoolUseCase } from './update-school.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
@@ -10,15 +10,10 @@ describe('UpdateSchoolUseCase', () => {
   const props = {
     id: '11111111-1111-4111-8111-111111111111',
     name: 'École test',
-    address: null,
-    city: null,
-    postalCode: null,
-    country: null,
     phoneNumber: null,
     email: 'contact@ecole.test',
     website: null,
     status: SchoolStatus.ACTIVE,
-    adminUserId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     createdBy: 'admin',
@@ -38,6 +33,7 @@ describe('UpdateSchoolUseCase', () => {
           stored = school;
           return school;
         },
+        findByIds: async () => [stored],
         findAll: async () => [stored],
       },
       stored: () => stored,
@@ -51,15 +47,27 @@ describe('UpdateSchoolUseCase', () => {
     const { school } = await useCase.handle({
       schoolId: props.id,
       name: 'École modifiée',
-      city: 'Yaoundé',
-      country: 'Cameroun',
+      phoneNumber: '+237 6 00 00 00 00',
+      website: 'https://ecole.test',
     });
 
-    const primitives = school.toPrimitives();
-    expect(primitives.name).toBe('École modifiée');
-    expect(primitives.city).toBe('Yaoundé');
-    expect(primitives.country).toBe('Cameroun');
+    expect(school.name).toBe('École modifiée');
+    expect(school.phoneNumber).toBe('+237 6 00 00 00 00');
+    expect(school.website).toBe('https://ecole.test');
     expect(stored().name).toBe('École modifiée');
+  });
+
+  it('leaves omitted fields untouched', async () => {
+    const { repo } = repository(School.reconstitute(props));
+    const useCase = new UpdateSchoolUseCase(repo);
+
+    const { school } = await useCase.handle({
+      schoolId: props.id,
+      website: 'https://ecole.test',
+    });
+
+    expect(school.name).toBe('École test');
+    expect(school.email).toBe('contact@ecole.test');
   });
 
   it('throws when the school does not exist', async () => {

@@ -13,7 +13,7 @@ import {
   escapeHtml,
 } from './infrastructure/templates/notification-templates.js';
 import { SmtpEmailSender } from './infrastructure/email/smtp-email-sender.js';
-import { SendNotification } from './application/use-cases/commands/send-notification/SendNotification.js';
+import { SendNotification } from './application/use-cases/commands/send-notification/send-notification.js';
 import { MarkNotificationRead } from './application/use-cases/commands/mark-notification-read/MarkNotificationRead.js';
 import { ListNotifications } from './application/use-cases/queries/list-notifications/ListNotifications.js';
 import { GetNotification } from './application/use-cases/queries/get-notification/GetNotification.js';
@@ -22,7 +22,7 @@ import { NotificationListener } from './infrastructure/events/notification.liste
 import { InvalidNotificationException } from './domain/exceptions/invalid-notification.exception.js';
 import { RecipientNotFoundException } from './domain/exceptions/recipient-not-found.exception.js';
 import { NotificationNotFoundException } from './domain/exceptions/notification-not-found.exception.js';
-import type { SendNotificationInput } from './application/use-cases/commands/send-notification/SendNotificationInput.js';
+import type { SendNotificationInput } from './application/use-cases/commands/send-notification/send-notification.input.js';
 
 export const makeSendNotificationInput = (
   overrides?: Partial<SendNotificationInput>,
@@ -106,10 +106,12 @@ describe('Notification templates and HTML escaping', () => {
 
     const en = templates.render(NotificationType.MEMBER_INVITED, 'en', {
       schoolName: 'Oxford High',
+      invitationToken: 'token-123',
     });
     expect(en.title).toBe('School invitation');
     expect(en.message).toContain('Oxford High');
     expect(en.html).toContain('Oxford High');
+    expect(en.message).toContain('token-123');
   });
 
   it('escapes HTML special characters in values', () => {
@@ -120,6 +122,7 @@ describe('Notification templates and HTML escaping', () => {
 
     const rendered = templates.render(NotificationType.MEMBER_INVITED, 'fr', {
       schoolName: '<img src=x onerror=alert(1)>',
+      invitationToken: 'token-123',
     });
     expect(rendered.html).not.toContain('<img');
     expect(rendered.html).toContain('&lt;img');
@@ -467,10 +470,12 @@ describe('NotificationListener event handling', () => {
       schoolName: 'Oxford High',
       email: 'invitee@example.com',
       sentAt: new Date(),
+      invitationToken: 'token-123',
     });
     expect(sendNotification.handle).toHaveBeenCalledWith(
       expect.objectContaining({
         type: NotificationType.MEMBER_INVITED,
+        payload: { schoolName: 'Oxford High', invitationToken: 'token-123' },
       }),
     );
 

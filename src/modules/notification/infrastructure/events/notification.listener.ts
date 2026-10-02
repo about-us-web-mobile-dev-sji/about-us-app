@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { createHash } from 'node:crypto';
-import { SendNotification } from '../../application/use-cases/commands/send-notification/SendNotification.js';
+import { SendNotification } from '../../application/use-cases/commands/send-notification/send-notification.js';
 import { NotificationType } from '../../domain/enums/notification-type.enum.js';
 import { UserAccountService } from '../../../user/application/user-account.service.js';
-import type { InvitationSentEvent } from '../../../event/invitation-sent.event.js';
-import type { InvitationAcceptedEvent } from '../../../event/invitation-accepted.event.js';
+import type { InvitationSentEvent } from '../../../school/infrastructure/events/invitation-sent.event.js';
+import type { InvitationAcceptedEvent } from '../../../school/infrastructure/events/invitation-accepted.event.js';
 import type { SuperAdminCreatedEvent } from '../../../user/domain/events/super-admin-created.event.js';
 import type { UserStatusUpdatedEvent } from '../../../user/domain/events/user-status-updated.event.js';
 
@@ -83,7 +83,10 @@ export class NotificationListener {
           type: NotificationType.MEMBER_INVITED,
           recipientIds: [recipient.id],
           organizationId: event.schoolId,
-          payload: { schoolName: event.schoolName },
+          payload: {
+            schoolName: event.schoolName,
+            invitationToken: event.invitationToken,
+          },
         },
       );
     } catch {
@@ -95,18 +98,26 @@ export class NotificationListener {
   }
 
   @OnEvent('school.member-role.changed')
-  roleChanged(event: {
+  async roleChanged(event: {
     eventId: string;
     schoolId: string;
     schoolName: string;
     recipientIds: string[];
   }) {
-    return this.dispatch(`role:${event.eventId}`, {
-      type: NotificationType.MEMBER_ROLE_CHANGED,
-      recipientIds: event.recipientIds,
-      organizationId: event.schoolId,
-      payload: { schoolName: event.schoolName },
-    });
+    // Dispatched one recipient at a time: SendNotification aborts its whole
+    // batch on the first recipient it can't resolve, which previously meant
+    // a stale/deleted previous-admin account could silently prevent the new
+    // admin from ever being notified.
+    await Promise.allSettled(
+      event.recipientIds.map((recipientId) =>
+        this.dispatch(`role:${event.eventId}:${recipientId}`, {
+          type: NotificationType.MEMBER_ROLE_CHANGED,
+          recipientIds: [recipientId],
+          organizationId: event.schoolId,
+          payload: { schoolName: event.schoolName },
+        }),
+      ),
+    );
   }
 
   @OnEvent('invitation.accepted')

@@ -11,18 +11,6 @@ export class SchoolEntity {
   @Column({ type: 'varchar', length: 200, unique: true })
   name!: string;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  address!: string | null;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  city!: string | null;
-
-  @Column({ type: 'varchar', length: 20, nullable: true, name: 'postal_code' })
-  postalCode!: string | null;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  country!: string | null;
-
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'phone_number' })
   phoneNumber!: string | null;
 
@@ -38,9 +26,6 @@ export class SchoolEntity {
     default: SchoolStatus.ACTIVE,
   })
   status!: SchoolStatus;
-
-  @Column({ type: 'uuid', nullable: true, name: 'admin_user_id' })
-  adminUserId!: string | null;
 
   @Column({
     type: 'bigint',

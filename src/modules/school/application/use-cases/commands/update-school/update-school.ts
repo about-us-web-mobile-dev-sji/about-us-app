@@ -1,0 +1,37 @@
+import type { UUID } from 'node:crypto';
+import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
+import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
+import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/school-name-already-exists.exception.js';
+import { toSchoolOutput } from '../../school.output.js';
+import type { UpdateSchoolInput } from './update-school.input.js';
+import type { UpdateSchoolOutput } from './update-school.output.js';
+
+export class UpdateSchoolUseCase {
+  constructor(private readonly schools: SchoolRepository) {}
+
+  async handle(input: UpdateSchoolInput): Promise<UpdateSchoolOutput> {
+    const school = await this.schools.findById(input.schoolId as UUID);
+    if (!school) {
+      throw new SchoolNotFoundException(input.schoolId);
+    }
+
+    const nextName = input.name?.trim();
+    if (nextName && nextName !== school.name) {
+      const alreadyExists = await this.schools.existsByName(nextName);
+      if (alreadyExists) {
+        throw new SchoolNameAlreadyExistsException();
+      }
+    }
+
+    school.update({
+      name: input.name,
+      phoneNumber: input.phoneNumber,
+      email: input.email,
+      website: input.website,
+    });
+
+    const saved = await this.schools.save(school);
+
+    return { school: toSchoolOutput(saved) };
+  }
+}
