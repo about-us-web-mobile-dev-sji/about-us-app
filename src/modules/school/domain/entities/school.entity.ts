@@ -71,6 +71,35 @@ export class School {
     return this.props.status;
   }
 
+  update(changes: {
+    name?: string;
+    phoneNumber?: string | null;
+    email?: string | null;
+    website?: string | null;
+  }): void {
+    if (changes.name !== undefined) {
+      const name = changes.name.trim();
+      if (!name) {
+        throw new InvalidSchoolException('School name is required');
+      }
+      this.props.name = name;
+    }
+
+    if (changes.phoneNumber !== undefined) {
+      this.props.phoneNumber = changes.phoneNumber?.trim() || null;
+    }
+
+    if (changes.email !== undefined) {
+      this.props.email = changes.email?.trim() || null;
+    }
+
+    if (changes.website !== undefined) {
+      this.props.website = changes.website?.trim() || null;
+    }
+
+    this.props.updatedAt = new Date();
+  }
+
   updateStatus(newStatus: SchoolStatus): void {
     if (!Object.values(SchoolStatus).includes(newStatus)) {
           throw new InvalidSchoolException('Invalid school status');

@@ -33,6 +33,7 @@ import { GrantSchoolMemberPermissionUseCase } from './application/use-cases/comm
 import { RevokeSchoolMemberPermissionUseCase } from './application/use-cases/commands/revoke-school-member-permission/revoke-school-member-permission.js';
 import { GetSchoolMemberPermissionsUseCase } from './application/use-cases/queries/get-school-member-permissions/get-school-member-permissions.js';
 import { GetMySchoolPermissionsUseCase } from './application/use-cases/queries/get-my-school-permissions/get-my-school-permissions.js';
+import { UpdateSchoolUseCase } from './application/use-cases/commands/update-school/update-school.js';
 import { UserModule } from '../user/user.module.js';
 import { UserAccountService } from '../user/application/user-account.service.js';
 import { MembershipEntity } from './infrastructure/persistence/typeorm/membership.entity.js';
@@ -309,7 +310,20 @@ import {
       ) => new RevokeSchoolMemberUseCase(memberships, authorization),
       inject: [SCHOOL_MEMBERSHIP_REPOSITORY, SchoolAuthorizationService],
     },
+    {
+      provide: UpdateSchoolUseCase,
+      useFactory: (schools: SchoolRepository) =>
+        new UpdateSchoolUseCase(schools),
+      inject: [SCHOOL_REPOSITORY],
+    },
   ],
-  exports: [CreateSchoolUseCase, ReplaceSchoolAdministratorUseCase],
+  exports: [
+    CreateSchoolUseCase,
+    ReplaceSchoolAdministratorUseCase,
+    ListSchoolsUseCase,
+    ToggleSchoolStatus,
+    AcceptSchoolInvitation,
+    UpdateSchoolUseCase,
+  ],
 })
 export class SchoolModule {}
