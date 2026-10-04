@@ -1,11 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index, Unique } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 import { SpaceKind } from '../../../domain/enums/space-kind.js';
 import { SpaceStatus } from '../../../domain/enums/space-status.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
 import type { UUID } from 'node:crypto';
 
 @Entity({ schema: 'spaces', name: 'spaces' })
-@Unique('uq_spaces_school_kind_root', ['schoolId', 'kind'])
+@Index('uq_spaces_school_kind_root', ['schoolId'], {
+  unique: true,
+  where: `"kind" = 'SCHOOL_ROOT'`,
+})
 @Index('idx_spaces_school_id', ['schoolId'])
 @Index('idx_spaces_parent_id', ['parentId'])
 @Index('idx_spaces_path', ['path'])

@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ToggleSchoolStatus } from './toggle-school-status.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
+import type { SpaceRepository } from '../../../../../spaces/domain/repositories/i-space.repository.js';
 
 describe('ToggleSchoolStatus', () => {
   const props = {
@@ -18,6 +19,11 @@ describe('ToggleSchoolStatus', () => {
     updatedAt: new Date(),
     createdBy: 'admin',
   };
+
+  const emptySpaces = {
+    findSchoolTree: vi.fn(async () => []),
+    save: vi.fn(async (space) => space),
+  } as unknown as SpaceRepository;
 
   const repository = (
     initial: School,
@@ -41,7 +47,7 @@ describe('ToggleSchoolStatus', () => {
 
   it('blocks an active school', async () => {
     const { repo, stored } = repository(School.reconstitute(props));
-    const useCase = new ToggleSchoolStatus(repo);
+    const useCase = new ToggleSchoolStatus(repo, emptySpaces);
 
     const { school } = await useCase.handle({
       schoolId: props.id,
@@ -49,13 +55,14 @@ describe('ToggleSchoolStatus', () => {
 
     expect(school.status).toBe(SchoolStatus.BLOCKED);
     expect(stored().status).toBe(SchoolStatus.BLOCKED);
+    expect(emptySpaces.findSchoolTree).toHaveBeenCalled();
   });
 
   it('unblocks a blocked school', async () => {
     const { repo, stored } = repository(
       School.reconstitute({ ...props, status: SchoolStatus.BLOCKED }),
     );
-    const useCase = new ToggleSchoolStatus(repo);
+    const useCase = new ToggleSchoolStatus(repo, emptySpaces);
 
     const { school } = await useCase.handle({
       schoolId: props.id,
@@ -67,7 +74,7 @@ describe('ToggleSchoolStatus', () => {
 
   it('throws when the school does not exist', async () => {
     const { repo } = repository(School.reconstitute(props));
-    const useCase = new ToggleSchoolStatus(repo);
+    const useCase = new ToggleSchoolStatus(repo, emptySpaces);
 
     await expect(
       useCase.handle({ schoolId: 'unknown-id' }),
