@@ -7,6 +7,7 @@ import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { SchoolModule } from './modules/school/school.module.js';
+import { SpacesModule } from './modules/spaces/spaces.module.js';
 import superAdminConfig from './config/super-admin.config.js';
 import databaseConfig from './config/data-base.config.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -18,6 +19,10 @@ import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from './shared/infrastructure/http/global-exception.filter.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
+
+const observeEnabled =
+  process.env.OBSERVE_APP_KEY !== undefined &&
+  process.env.OBSERVE_APP_SECRET !== undefined;
 
 @Module({
   imports: [
@@ -33,14 +38,19 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UserModule,
     AuthModule,
     SchoolModule,
+    SpacesModule,
     EventModule,
     NotificationModule,
 
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'about-us',
-    }),
+    ...(observeEnabled
+      ? [
+          ObserveModule.forRoot({
+            appKey: process.env.OBSERVE_APP_KEY!,
+            appSecret: process.env.OBSERVE_APP_SECRET!,
+            serviceId: 'about-us',
+          }),
+        ]
+      : []),
   ],
 
   controllers: [AppController],

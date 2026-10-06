@@ -43,6 +43,11 @@ import { SchoolAdministrationController } from './infrastructure/api/controllers
 import { SchoolInvitationController } from './infrastructure/api/controllers/school-invitation.controller.js';
 import { SchoolMemberController } from './infrastructure/api/controllers/school-member.controller.js';
 import { SchoolRoleController } from './infrastructure/api/controllers/school-role.controller.js';
+import { SpacesModule } from '../spaces/spaces.module.js';
+import {
+  SPACE_REPOSITORY,
+  type SpaceRepository,
+} from '../spaces/domain/repositories/i-space.repository.js';
 
 @Module({
   imports: [
@@ -56,6 +61,7 @@ import { SchoolRoleController } from './infrastructure/api/controllers/school-ro
     ]),
     UserModule,
     AuthModule,
+    SpacesModule,
   ],
   controllers: [
     SchoolController,
@@ -117,8 +123,9 @@ import { SchoolRoleController } from './infrastructure/api/controllers/school-ro
     },
     {
       provide: ToggleSchoolStatus,
-      useFactory: (schools: SchoolRepository) => new ToggleSchoolStatus(schools),
-      inject: [SCHOOL_REPOSITORY],
+      useFactory: (schools: SchoolRepository, spaces: SpaceRepository) =>
+        new ToggleSchoolStatus(schools, spaces),
+      inject: [SCHOOL_REPOSITORY, SPACE_REPOSITORY],
     },
     {
       provide: ReplaceSchoolAdministratorUseCase,
@@ -293,7 +300,20 @@ import { SchoolRoleController } from './infrastructure/api/controllers/school-ro
       ) => new DeleteSchoolRoleUseCase(roles, memberships, authorization, eventEmitter),
       inject: [SCHOOL_ROLE_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, SchoolAuthorizationService, EventEmitter2],
     },
+    {
+      provide: UpdateSchoolUseCase,
+      useFactory: (schools: SchoolRepository) =>
+        new UpdateSchoolUseCase(schools),
+      inject: [SCHOOL_REPOSITORY],
+    },
   ],
-  exports: [CreateSchoolUseCase, ReplaceSchoolAdministratorUseCase],
+  exports: [
+    CreateSchoolUseCase,
+    ReplaceSchoolAdministratorUseCase,
+    ListSchoolsUseCase,
+    ToggleSchoolStatus,
+    AcceptSchoolInvitation,
+    UpdateSchoolUseCase,
+  ],
 })
 export class SchoolModule {}
