@@ -1,14 +1,5 @@
-export class TokenResponseDto {
-  constructor(
-    readonly accessToken: string,
-    readonly tokenType: string,
-    readonly expiresIn: number,
-    readonly refreshToken?: string,
-  ) {}
-}
-export class AuthenticatedSubjectDto {
-  constructor(
-    readonly subjectId: string,
-    readonly sessionId: string,
-  ) {}
+/** Body returned to web clients: tokens travel only in HttpOnly cookies. */
+export interface WebSessionResponseDto {
+  user: { id: string; email: string };
+  sessionId: string;
 }

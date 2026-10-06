@@ -210,6 +210,10 @@ export const inMemoryInvitations = (initial: SchoolInvitation[] = []) => {
   let nextId = 1;
   const repo: SchoolInvitationRepository = {
     findByTokenHash: async () => null,
+    hasPendingForEmail: async (email) =>
+      stored.some(
+        (i) => i.email === email && i.status === InvitationStatus.PENDING && !i.isExpired(),
+      ),
     findPendingBySchoolAndEmail: async (sId, email) =>
       stored.filter(
         (i) => i.schoolId === sId && i.email === email && i.status === InvitationStatus.PENDING,

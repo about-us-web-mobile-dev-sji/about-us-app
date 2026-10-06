@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { SpaceException } from '../../domain/exceptions/space.exceptions.js';
+import type { ErrorResponse } from '../../../../shared/infrastructure/http/error-response.js';
 
 @Catch(SpaceException)
 export class SpaceExceptionFilter implements ExceptionFilter {
@@ -92,10 +93,7 @@ export class SpaceExceptionFilter implements ExceptionFilter {
         break;
     }
 
-    response.status(status).json({
-      statusCode: status,
-      message,
-      error: exception.name,
-    });
+    const body: ErrorResponse = { code: exception.code, message, details: null };
+    response.status(status).json(body);
   }
 }

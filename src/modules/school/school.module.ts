@@ -44,6 +44,7 @@ import { SchoolInvitationController } from './infrastructure/api/controllers/sch
 import { SchoolMemberController } from './infrastructure/api/controllers/school-member.controller.js';
 import { SchoolRoleController } from './infrastructure/api/controllers/school-role.controller.js';
 import { SpacesModule } from '../spaces/spaces.module.js';
+import { InvitationSignUpPolicy } from './infrastructure/auth/invitation-sign-up-policy.js';
 import {
   SPACE_REPOSITORY,
   type SpaceRepository,
@@ -71,6 +72,7 @@ import {
     SchoolRoleController,
   ],
   providers: [
+    InvitationSignUpPolicy,
     {
       provide: SCHOOL_REPOSITORY,
       useFactory: (repo: Repository<SchoolEntity>) => new TypeormSchoolRepository(repo),

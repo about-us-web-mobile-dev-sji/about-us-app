@@ -1,5 +1,6 @@
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InvalidGoogleIdentityException } from '../../domain/exceptions/invalid-google-identity.exception.js';
 import { Strategy, type Profile } from 'passport-google-oauth20';
 import { ConfigService } from '@nestjs/config';
 import type { GoogleIdentity } from '../../application/models/google-identity.js';
@@ -27,7 +28,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       (value) => value.verified === true,
     )?.value;
     if (profile.provider !== 'google' || !profile.id || !email) {
-      throw new UnauthorizedException('Google must provide a verified email');
+      throw new InvalidGoogleIdentityException();
     }
     return {
       sub: profile.id,

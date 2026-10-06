@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AuthController } from './controllers/auth.controller.js';
+import { WebSessionCookies } from './web-session-cookies.js';
 import type { ChangePassword } from '../../application/use-cases/commands/change-password/change-password.js';
 
 const body = {
@@ -12,7 +13,9 @@ function fixture(cookies = {}, headers: Record<string, string> = {}) {
   const handle = vi.fn().mockResolvedValue(undefined);
   const controller = new AuthController(
     { handle } as unknown as ChangePassword,
-    new ConfigService({ auth: { webOrigin: 'http://localhost:4200' } }),
+    new WebSessionCookies(
+      new ConfigService({ auth: { webOrigin: 'http://localhost:4200' } }),
+    ),
   );
   const req = {
     cookies,
@@ -88,7 +91,7 @@ describe('Password route', () => {
       const f = fixture({}, { authorization: 'Bearer token' });
       await expect(
         f.controller.changePassword(invalid, f.req, f.res),
-      ).rejects.toThrow('currentPassword and newPassword are required');
+      ).rejects.toThrow('Invalid or missing fields: currentPassword, newPassword');
       expect(f.handle).not.toHaveBeenCalled();
     },
   );

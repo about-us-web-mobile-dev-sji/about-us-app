@@ -38,6 +38,8 @@ export class SchoolRoleController {
     const output = await this.listRoles.handle({
       schoolId,
       performedBy: this.performer(req),
+      // Needed to pick a role when inviting from the platform console.
+      platformAdmin: req.auth.user.globalRole === GlobalRole.SUPER_ADMIN,
     });
     return output.roles.map((role) => SchoolRoleResponse.fromOutput(role));
   }

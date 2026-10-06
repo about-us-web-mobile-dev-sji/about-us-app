@@ -1,4 +1,5 @@
 export const NOTIFICATION_CONFIG = Symbol('NOTIFICATION_CONFIG');
+export const NOTIFICATION_APP_URL = Symbol('NOTIFICATION_APP_URL');
 
 export interface NotificationConfig {
   enabled: boolean;
@@ -10,6 +11,8 @@ export interface NotificationConfig {
   smtpSecure: boolean;
   smtpUser?: string;
   smtpPassword?: string;
+  /** Web app origin, used to build links sent by e-mail. */
+  appUrl: string;
 }
 
 export function notificationConfig(
@@ -59,5 +62,6 @@ export function notificationConfig(
     smtpSecure: bool('SMTP_SECURE', 'false'),
     smtpUser: env.SMTP_USER,
     smtpPassword: env.SMTP_PASSWORD,
+    appUrl: new URL(env.AUTH_WEB_ORIGIN || 'http://localhost:4200').origin,
   };
 }

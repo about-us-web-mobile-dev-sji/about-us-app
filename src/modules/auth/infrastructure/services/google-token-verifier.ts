@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { InvalidGoogleIdentityException } from '../../domain/exceptions/invalid-google-identity.exception.js';
 import { OAuth2Client } from 'google-auth-library';
 import type { GoogleIdentity } from '../../application/models/google-identity.js';
 import type { GoogleTokenVerifierGateway } from '../../application/gateways/i-google-token-verifier.gateway.js';
@@ -24,7 +24,7 @@ export class GoogleTokenVerifier implements GoogleTokenVerifierGateway {
         lastName: payload.family_name,
       };
     } catch {
-      throw new UnauthorizedException('Invalid Google ID token');
+      throw new InvalidGoogleIdentityException();
     }
   }
 }

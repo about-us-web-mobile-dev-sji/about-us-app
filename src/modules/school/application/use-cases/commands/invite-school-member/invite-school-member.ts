@@ -59,7 +59,7 @@ export class InviteSchoolMemberUseCase {
       );
     }
 
-    const actor = { userId: input.performedBy };
+    const actor = { userId: input.performedBy, platformAdmin: input.platformAdmin };
     await this.authorization.assertCan(
       actor,
       SchoolAction.INVITE_MEMBER,

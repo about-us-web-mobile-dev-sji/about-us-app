@@ -10,6 +10,8 @@ import { AuthIdentity } from '../../../../domain/entities/auth-identity.js';
 import { SessionIssuer } from '../../../services/session-issuer.service.js';
 import { AuthProvider } from '../../../../domain/enums/auth-provider.enums.js';
 import type { AccessTokenIssuer } from '../../../services/access-token-issuer.service.js';
+import type { SignUpPolicyGateway } from '../../../gateways/i-sign-up-policy.gateway.js';
+import { SignUpNotAllowedException } from '../../../../domain/exceptions/sign-up-not-allowed.exception.js';
 
 export class GoogleLoginUseCase {
   // Serialize local provisioning; replace with a transaction for durable storage.
@@ -21,6 +23,7 @@ export class GoogleLoginUseCase {
     private readonly accessTokens: AccessTokenIssuer,
     private readonly refreshTokens: RefreshTokenGateway,
     private readonly options: { issuer: string; sessionTtlSeconds: number },
+    private readonly signUpPolicy: SignUpPolicyGateway,
   ) {}
   handle(input: GoogleLoginInput): Promise<GoogleLoginOutput> {
     const result = this.loginQueue.then(() => this.completeGoogleLogin(input));
@@ -42,6 +45,9 @@ export class GoogleLoginUseCase {
       profile.sub,
     );
     if (!identity) {
+      // Only invited people may create an account through Google.
+      if (!(await this.signUpPolicy.canSignUp(profile.email)))
+        throw new SignUpNotAllowedException();
       const subjectId = await this.subjects.create({
         email: profile.email,
         firstName: profile.firstName,

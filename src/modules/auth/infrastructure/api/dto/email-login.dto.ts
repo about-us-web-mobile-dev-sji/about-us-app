@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { InvalidAuthRequestException } from '../../../domain/exceptions/invalid-auth-request.exception.js';
+
 export class EmailLoginDto {
   private constructor(
     readonly email: string,
@@ -17,7 +18,7 @@ export class EmailLoginDto {
       !body.password ||
       body.password.length > 1024
     )
-      throw new BadRequestException('email and password are required');
+      throw new InvalidAuthRequestException(['email', 'password']);
     return new EmailLoginDto(body.email, body.password);
   }
 }

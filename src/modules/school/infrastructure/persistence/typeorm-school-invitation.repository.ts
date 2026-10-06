@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { SchoolInvitationEntity } from './typeorm/school-invitation.entity.js';
 import { SchoolInvitation } from '../../domain/entities/school-invitation.entity.js';
 import { InvitationStatus } from '../../domain/enums/invitation-status.enum.js';
@@ -25,6 +25,14 @@ export class TypeormSchoolInvitationRepository
       status: InvitationStatus.PENDING,
     });
     return entities.map((entity) => SchoolInvitationMapper.toDomain(entity));
+  }
+
+  async hasPendingForEmail(email: string): Promise<boolean> {
+    return this.repo.existsBy({
+      email: email.trim().toLowerCase(),
+      status: InvitationStatus.PENDING,
+      expiresAt: MoreThan(Date.now()),
+    });
   }
 
   async save(invitation: SchoolInvitation): Promise<SchoolInvitation> {

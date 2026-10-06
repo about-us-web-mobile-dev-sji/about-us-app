@@ -52,7 +52,6 @@ import {
   SESSION_REPOSITORY,
   type SessionRepository,
 } from './domain/repositories/session.repositories.js';
-// sqlite adapters removed — using TypeORM-backed repositories
 import { UserAuthSubjectGateway } from './infrastructure/services/user-auth-subject.gateway.js';
 import { NestJwtService } from './infrastructure/services/jwt.services.js';
 import { OpaqueRefreshTokenGateway } from './infrastructure/services/opaque-refresh-token.gateway.js';
@@ -62,9 +61,22 @@ import { WebAuthController } from './infrastructure/api/controllers/web-auth.con
 import { MobileAuthController } from './infrastructure/api/controllers/mobile-auth.controller.js';
 import { BCryptPasswordEncryptionGateway } from './infrastructure/services/bcrypt-password-encryption.gateway.js';
 import { GoogleStrategy } from './infrastructure/services/google.strategy.js';
-import { GoogleAuthGuard } from './infrastructure/services/google-auth-guard.services.js';
+import {
+  GoogleAuthGuard,
+  GoogleLoginStartGuard,
+} from './infrastructure/services/google-auth-guard.services.js';
 import { AuthController } from './infrastructure/api/controllers/auth.controller.js';
 import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
+import { WebSessionCookies } from './infrastructure/api/web-session-cookies.js';
+import { SessionController } from './infrastructure/api/controllers/session.controller.js';
+import { ListSessionsUseCase } from './application/use-cases/queries/list-sessions/ListSessions.js';
+import { RevokeSessionUseCase } from './application/use-cases/commands/revoke-session/RevokeSession.js';
+import { RevokeAllSessionsUseCase } from './application/use-cases/commands/revoke-all-sessions/RevokeAllSessions.js';
+import {
+  SIGN_UP_POLICY,
+  type SignUpPolicyGateway,
+} from './application/gateways/i-sign-up-policy.gateway.js';
+import { SignUpPolicyRegistry } from './infrastructure/services/sign-up-policy.registry.js';
 
 @Module({
   imports: [
@@ -92,7 +104,12 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
       },
     }),
   ],
-  controllers: [AuthController, WebAuthController, MobileAuthController],
+  controllers: [
+    AuthController,
+    WebAuthController,
+    MobileAuthController,
+    SessionController,
+  ],
   exports: [
     ChangePassword,
     AuthGuard,
@@ -101,8 +118,29 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
     RefreshTokenUseCase,
     AuthenticateUseCase,
     LogoutUseCase,
+    SignUpPolicyRegistry,
   ],
   providers: [
+    SignUpPolicyRegistry,
+    { provide: SIGN_UP_POLICY, useExisting: SignUpPolicyRegistry },
+    {
+      provide: ListSessionsUseCase,
+      inject: [SESSION_REPOSITORY],
+      useFactory: (sessions: SessionRepository) =>
+        new ListSessionsUseCase(sessions),
+    },
+    {
+      provide: RevokeSessionUseCase,
+      inject: [SESSION_REPOSITORY],
+      useFactory: (sessions: SessionRepository) =>
+        new RevokeSessionUseCase(sessions),
+    },
+    {
+      provide: RevokeAllSessionsUseCase,
+      inject: [SESSION_REPOSITORY],
+      useFactory: (sessions: SessionRepository) =>
+        new RevokeAllSessionsUseCase(sessions),
+    },
     {
       provide: PASSWORD_CHANGE,
       inject: [DataSource],
@@ -138,6 +176,7 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
     },
     { provide: GOOGLE_TOKEN_VERIFIER, useExisting: GoogleTokenVerifier },
     AuthGuard,
+    WebSessionCookies,
     {
       provide: GoogleTokenVerifier,
       inject: [ConfigService],
@@ -191,6 +230,7 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
         ),
     },
     GoogleAuthGuard,
+    GoogleLoginStartGuard,
     {
       provide: GoogleStrategy,
       useFactory: (config: ConfigService) => new GoogleStrategy(config),
@@ -259,6 +299,7 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
         AccessTokenIssuer,
         REFRESH_TOKEN_SERVICE,
         ConfigService,
+        SIGN_UP_POLICY,
       ],
       useFactory: (
         subjects: AuthSubjectGateway,
@@ -267,6 +308,7 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
         accessTokens: AccessTokenIssuer,
         refresh: RefreshTokenGateway,
         config: ConfigService,
+        signUpPolicy: SignUpPolicyGateway,
       ) =>
         new GoogleLoginUseCase(
           subjects,
@@ -280,6 +322,7 @@ import { AuthGuard } from './infrastructure/api/guard/auth.guard.js';
               'auth.sessionTtlSeconds',
             ),
           },
+          signUpPolicy,
         ),
     },
     {

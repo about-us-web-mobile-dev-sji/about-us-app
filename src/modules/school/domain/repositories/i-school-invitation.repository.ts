@@ -10,5 +10,7 @@ export interface SchoolInvitationRepository {
     schoolId: string,
     email: string,
   ): Promise<SchoolInvitation[]>;
+  /** True when an unexpired PENDING invitation exists for this e-mail, in any school. */
+  hasPendingForEmail(email: string): Promise<boolean>;
   save(invitation: SchoolInvitation): Promise<SchoolInvitation>;
 }

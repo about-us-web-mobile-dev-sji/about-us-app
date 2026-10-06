@@ -14,6 +14,7 @@ import {
 import { EMAIL_SENDER } from './application/gateways/i-email-sender.gateway.js';
 import { NOTIFICATION_TEMPLATES } from './application/gateways/i-notification-templates.gateway.js';
 import { SendNotification } from './application/use-cases/commands/send-notification/send-notification.js';
+import { SendInvitationEmail } from './application/use-cases/commands/send-invitation-email/send-invitation-email.js';
 import { MarkNotificationRead } from './application/use-cases/commands/mark-notification-read/MarkNotificationRead.js';
 import { ListNotifications } from './application/use-cases/queries/list-notifications/ListNotifications.js';
 import { GetNotification } from './application/use-cases/queries/get-notification/GetNotification.js';
@@ -29,6 +30,7 @@ import {
   NOTIFICATION_CONFIG,
   notificationConfig,
   type NotificationConfig,
+  NOTIFICATION_APP_URL,
 } from './infrastructure/notification.config.js';
 
 const logger = new Logger('Notifications');
@@ -106,6 +108,16 @@ const logger = new Logger('Notifications');
       useFactory: (notifications: NotificationRepository) =>
         new MarkNotificationRead(notifications),
     },
+    {
+      provide: SendInvitationEmail,
+      inject: [NOTIFICATION_TEMPLATES, EMAIL_SENDER, NOTIFICATION_CONFIG],
+      useFactory: (
+        templates: CatalogNotificationTemplates,
+        email: SmtpEmailSender,
+        config: NotificationConfig,
+      ) => new SendInvitationEmail(templates, email, config),
+    },
+    { provide: NOTIFICATION_APP_URL, inject: [NOTIFICATION_CONFIG], useFactory: (config: NotificationConfig) => config.appUrl },
     NotificationListener,
   ],
   exports: [SendNotification],

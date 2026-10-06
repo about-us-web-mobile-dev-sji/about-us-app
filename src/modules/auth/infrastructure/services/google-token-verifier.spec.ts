@@ -60,13 +60,13 @@ describe('GoogleTokenVerifier', () => {
   ])('rejects invalid claims %j', async (claims) => {
     await expect(
       new GoogleTokenVerifier(['allowed-client']).verify(token(claims)),
-    ).rejects.toThrow('Invalid Google ID token');
+    ).rejects.toThrow('Invalid Google identity');
   });
   it('rejects a forged signature', async () => {
     const raw = token().split('.');
     raw[2] = Buffer.alloc(256).toString('base64url');
     await expect(
       new GoogleTokenVerifier(['allowed-client']).verify(raw.join('.')),
-    ).rejects.toThrow('Invalid Google ID token');
+    ).rejects.toThrow('Invalid Google identity');
   });
 });

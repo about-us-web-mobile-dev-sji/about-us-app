@@ -4,4 +4,6 @@ export interface InviteSchoolMemberInput {
   // Defaults to the school's student role; the administrator role is refused.
   roleId?: string;
   performedBy: string;
+  /** See SchoolActor.platformAdmin. */
+  platformAdmin?: boolean;
 }

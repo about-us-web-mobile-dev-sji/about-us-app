@@ -10,6 +10,17 @@ import type { Response } from 'express';
 import { DomainException } from '../../domain/exceptions/domain.exception.js';
 import type { ErrorResponse } from './error-response.js';
 
+/** Stable codes for framework errors, so clients can translate them like domain codes. */
+const HTTP_ERROR_CODES: Record<number, string> = {
+  400: 'BAD_REQUEST',
+  401: 'UNAUTHORIZED',
+  403: 'FORBIDDEN',
+  404: 'NOT_FOUND',
+  409: 'CONFLICT',
+  422: 'UNPROCESSABLE_ENTITY',
+  429: 'TOO_MANY_REQUESTS',
+};
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
@@ -42,8 +53,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const payload = exception.getResponse();
+      const code = HTTP_ERROR_CODES[exception.getStatus()] ?? 'HTTP_ERROR';
       if (typeof payload === 'string') {
-        return { code: 'HTTP_ERROR', message: payload, details: null };
+        return { code, message: payload, details: null };
       }
 
       const messages =
@@ -51,7 +63,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           ? payload.message
           : null;
       return {
-        code: 'HTTP_ERROR',
+        code,
         message: typeof messages === 'string' ? messages : exception.message,
         details: Array.isArray(messages) ? { messages } : null,
       };

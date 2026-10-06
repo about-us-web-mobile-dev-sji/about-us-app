@@ -1,5 +1,5 @@
 import { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
-import { SchoolAction } from '../../domain/enums/school-action.enum.js';
+import { SCHOOL_ACTIONS, SchoolAction } from '../../domain/enums/school-action.enum.js';
 import { SchoolStatus } from '../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../domain/exceptions/invalid-school.exception.js';
 import { SchoolNotFoundException } from '../../domain/exceptions/school-not-found.exception.js';
@@ -15,6 +15,12 @@ import type { UUID } from 'node:crypto';
 
 export interface SchoolActor {
   userId: string;
+  /**
+   * The platform administrator, acting from outside the school. Set by the
+   * HTTP layer only for the operations the platform may perform in any school
+   * (inviting members, reading roles); it then holds every school action.
+   */
+  platformAdmin?: boolean;
 }
 
 export interface SchoolAccess {
@@ -43,6 +49,9 @@ export class SchoolAuthorizationService {
   ) {}
 
   async getAccess(actor: SchoolActor, schoolId: string): Promise<SchoolAccess> {
+    if (actor.platformAdmin) {
+      return { membership: null, roles: [], actions: [...SCHOOL_ACTIONS] };
+    }
     const membership = await this.memberships.findBySchoolAndUser(
       schoolId,
       actor.userId,
@@ -147,7 +156,7 @@ export class SchoolAuthorizationService {
     schoolId: string,
     permissions: readonly SchoolAction[],
   ): Promise<void> {
-    if (await this.isSchoolAdmin(actor, schoolId)) {
+    if (actor.platformAdmin || (await this.isSchoolAdmin(actor, schoolId))) {
       return;
     }
     if (permissions.includes(SchoolAction.MANAGE_ROLES)) {
