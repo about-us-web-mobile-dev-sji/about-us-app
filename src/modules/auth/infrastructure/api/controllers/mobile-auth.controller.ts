@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Header,
@@ -20,6 +19,7 @@ import {
 import { EmailLoginDto } from '../dto/email-login.dto.js';
 import { RefreshTokenDto } from '../dto/refresh-token.dto.js';
 import { accessToken } from '../auth-transport.js';
+import { InvalidAuthRequestException } from '../../../domain/exceptions/invalid-auth-request.exception.js';
 
 
 @Controller('auth/mobile')
@@ -54,7 +54,7 @@ export class MobileAuthController {
   async loginGoogle(@Body() body: unknown, @Req() req: Request) {
     const idToken = (body as { idToken?: unknown } | null)?.idToken;
     if (typeof idToken !== 'string' || !idToken || idToken.length > 16384)
-      throw new BadRequestException('idToken is required');
+      throw new InvalidAuthRequestException(['idToken']);
     return this.google.handle({
       profile: await this.verifier.verify(idToken),
       userAgent: req.get('user-agent'),

@@ -23,6 +23,7 @@ describe('CreateSchoolUseCase invitation', () => {
         School.reconstitute({ ...school.toPrimitives(), id: schoolId }),
     } as unknown as SchoolRepository;
     const invitations: SchoolInvitationRepository = {
+      hasPendingForEmail: async () => false,
       findByTokenHash: async () => null,
       findPendingBySchoolAndEmail: async () => [],
       save: async (invitation) => {

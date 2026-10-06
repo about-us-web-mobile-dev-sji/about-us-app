@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { InvalidAuthRequestException } from '../../../domain/exceptions/invalid-auth-request.exception.js';
+
 export class RefreshTokenDto {
   private constructor(readonly refreshToken: string) {}
   static parse(body: unknown): RefreshTokenDto {
@@ -10,7 +11,7 @@ export class RefreshTokenDto {
       !body.refreshToken ||
       body.refreshToken.length > 8192
     )
-      throw new BadRequestException('refreshToken is required');
+      throw new InvalidAuthRequestException(['refreshToken']);
     return new RefreshTokenDto(body.refreshToken);
   }
 }

@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { InvalidAccessTokenException } from '../../domain/exceptions/invalid-access-token.exception.js';
 import { JwtService } from '@nestjs/jwt';
 import type { AccessTokenGateway } from '../../application/gateways/i-access-token.gateway.js';
 import type { AccessToken } from '../../domain/entities/access-token.js';
@@ -32,7 +32,7 @@ async function verify<T extends 'access' | 'refresh'>(
       exp: number;
     };
   } catch {
-    throw new UnauthorizedException('Invalid or expired token');
+    throw new InvalidAccessTokenException();
   }
 }
 export class NestJwtService implements AccessTokenGateway {

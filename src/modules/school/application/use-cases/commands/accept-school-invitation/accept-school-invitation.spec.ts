@@ -95,6 +95,7 @@ describe('AcceptSchoolInvitation', () => {
     } as unknown as SchoolRepository;
 
     const invitationRepo: SchoolInvitationRepository = {
+      hasPendingForEmail: async () => false,
       findByTokenHash: async (hash) =>
         invitations.find((i) => i.toPrimitives().tokenHash === hash) ?? null,
       findPendingBySchoolAndEmail: async () => [],

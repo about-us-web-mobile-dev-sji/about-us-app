@@ -14,7 +14,7 @@ const catalog = {
     ],
     [NotificationType.MEMBER_INVITED]: [
       'Invitation à une école',
-      'Vous êtes invité à rejoindre « {schoolName} ». Connectez-vous à About Us et saisissez ce code d\'invitation pour l\'accepter : {invitationToken}',
+      'Vous êtes invité à rejoindre « {schoolName} ». Ouvrez ce lien et connectez-vous avec Google pour accepter l\'invitation : {acceptUrl}',
     ],
     [NotificationType.MEMBER_ROLE_CHANGED]: [
       'Rôle modifié',
@@ -36,7 +36,7 @@ const catalog = {
     ],
     [NotificationType.MEMBER_INVITED]: [
       'School invitation',
-      'You are invited to join “{schoolName}”. Sign in to About Us and enter this invitation code to accept it: {invitationToken}',
+      'You are invited to join “{schoolName}”. Open this link and sign in with Google to accept the invitation: {acceptUrl}',
     ],
     [NotificationType.MEMBER_ROLE_CHANGED]: [
       'Role changed',

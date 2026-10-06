@@ -1,8 +1,4 @@
-import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
-import { ChangePassword } from '../../../application/use-cases/commands/change-password/change-password.js';
-import { ChangePasswordDto } from '../dto/change-password.dto.js';
-import { accessToken, verifyWebOrigin } from '../auth-transport.js';
 import {
   Body,
   Controller,
@@ -15,13 +11,18 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ChangePassword } from '../../../application/use-cases/commands/change-password/change-password.js';
+import { ChangePasswordDto } from '../dto/change-password.dto.js';
+import { accessToken } from '../auth-transport.js';
 import { AuthGuard, type AuthenticatedRequest } from '../guard/auth.guard.js';
+import { WebSessionCookies } from '../web-session-cookies.js';
+
 @Controller('auth')
 export class AuthController {
   constructor(
     @Inject(ChangePassword)
     private readonly changePasswordUseCase: ChangePassword,
-    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(WebSessionCookies) private readonly cookies: WebSessionCookies,
   ) {}
 
   @Patch('password')
@@ -32,25 +33,14 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    const usesCookie =
-      typeof req.cookies?.access_token === 'string' &&
-      !!req.cookies.access_token;
-    if (usesCookie)
-      verifyWebOrigin(req, this.config.getOrThrow<string>('auth.webOrigin'));
-    const token = accessToken(req);
+    const usesCookie = this.cookies.hasAccessToken(req);
+    if (usesCookie) this.cookies.verifyOrigin(req);
     await this.changePasswordUseCase.handle({
       ...ChangePasswordDto.parse(body),
-      accessToken: token,
+      accessToken: accessToken(req),
     });
-    if (usesCookie) {
-      const options = {
-        httpOnly: true,
-        secure: this.config.get('NODE_ENV') === 'production',
-        sameSite: 'lax' as const,
-      };
-      res.clearCookie('access_token', { ...options, path: '/' });
-      res.clearCookie('refresh_token', { ...options, path: '/auth/web' });
-    }
+    // Every session has been revoked: the web cookies are now useless.
+    if (usesCookie) this.cookies.clear(res);
   }
 
   @Get('me')

@@ -26,7 +26,7 @@ export class ListSchoolRolesUseCase {
     // Who assigns roles, or attaches documents to them, needs to see them as
     // much as who manages them.
     await this.authorization.assertCanAny(
-      { userId: input.performedBy },
+      { userId: input.performedBy, platformAdmin: input.platformAdmin },
       [SchoolAction.MANAGE_ROLES, SchoolAction.ASSIGN_ROLES, SchoolAction.SHARE_DOCUMENTS],
       input.schoolId,
     );

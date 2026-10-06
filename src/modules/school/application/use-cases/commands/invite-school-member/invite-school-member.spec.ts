@@ -40,6 +40,7 @@ describe('InviteSchoolMemberUseCase', () => {
     let invitations: SchoolInvitation[] = [];
     let nextId = 1;
     const invitationRepo: SchoolInvitationRepository = {
+      hasPendingForEmail: async () => false,
       findByTokenHash: async () => null,
       findPendingBySchoolAndEmail: async (sId, email) =>
         invitations.filter(

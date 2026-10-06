@@ -107,7 +107,7 @@ describe('Notification templates and HTML escaping', () => {
 
     const en = templates.render(NotificationType.MEMBER_INVITED, 'en', {
       schoolName: 'Oxford High',
-      invitationToken: 'token-123',
+      acceptUrl: 'https://app.example/invitations/accept?token=token-123',
     });
     expect(en.title).toBe('School invitation');
     expect(en.message).toContain('Oxford High');
@@ -123,7 +123,7 @@ describe('Notification templates and HTML escaping', () => {
 
     const rendered = templates.render(NotificationType.MEMBER_INVITED, 'fr', {
       schoolName: '<img src=x onerror=alert(1)>',
-      invitationToken: 'token-123',
+      acceptUrl: 'https://app.example/invitations/accept?token=token-123',
     });
     expect(rendered.html).not.toContain('<img');
     expect(rendered.html).toContain('&lt;img');
@@ -445,6 +445,8 @@ describe('NotificationListener event handling', () => {
     const listener = new NotificationListener(
       sendNotification as any,
       users as any,
+      { handle: vi.fn() } as any,
+      'https://app.example',
     );
 
     await listener.created({ subjectId: randomUUID() });
@@ -477,7 +479,10 @@ describe('NotificationListener event handling', () => {
     expect(sendNotification.handle).toHaveBeenCalledWith(
       expect.objectContaining({
         type: NotificationType.MEMBER_INVITED,
-        payload: { schoolName: 'Oxford High', invitationToken: 'token-123' },
+        payload: {
+          schoolName: 'Oxford High',
+          acceptUrl: expect.stringContaining('token=token-123'),
+        },
       }),
     );
 

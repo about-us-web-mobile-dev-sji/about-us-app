@@ -16,7 +16,7 @@ import { isUUID } from 'class-validator';
 const payloadKeys: Record<NotificationType, string[]> = {
   [NotificationType.WELCOME]: ['firstName'],
   [NotificationType.SECURITY_ALERT]: ['status'],
-  [NotificationType.MEMBER_INVITED]: ['schoolName', 'invitationToken'],
+  [NotificationType.MEMBER_INVITED]: ['schoolName', 'acceptUrl'],
   [NotificationType.MEMBER_JOINED]: ['schoolName'],
   [NotificationType.MEMBER_ROLE_CHANGED]: ['schoolName'],
 };
@@ -159,9 +159,9 @@ export class SendNotification {
 
     if (
       input.type === NotificationType.MEMBER_INVITED &&
-      typeof input.payload.invitationToken !== 'string'
+      typeof input.payload.acceptUrl !== 'string'
     ) {
-      throw new InvalidNotificationException('invitationToken is required');
+      throw new InvalidNotificationException('acceptUrl is required');
     }
   }
 }

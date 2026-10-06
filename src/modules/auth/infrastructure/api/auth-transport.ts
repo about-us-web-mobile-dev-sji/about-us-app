@@ -1,6 +1,6 @@
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
-
+import { AccessTokenRequiredException } from '../../domain/exceptions/access-token-required.exception.js';
+import { UntrustedOriginException } from '../../domain/exceptions/untrusted-origin.exception.js';
 
 export function accessToken(
   req: Request,
@@ -11,15 +11,13 @@ export function accessToken(
     return cookie;
   const match = /^Bearer ([^\s]+)$/i.exec(req.get('authorization') ?? '');
   if (transport !== 'WEB' && match) return match[1];
-  throw new UnauthorizedException('Access token is required');
+  throw new AccessTokenRequiredException();
 }
-
-
 
 export function verifyWebOrigin(req: Request, origin: string): void {
   if (
     req.get('origin') !== origin ||
     req.get('sec-fetch-site') === 'cross-site'
   )
-    throw new ForbiddenException('Untrusted request origin');
+    throw new UntrustedOriginException();
 }

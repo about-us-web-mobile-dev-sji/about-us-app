@@ -2,7 +2,8 @@ import 'reflect-metadata';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
+import { InsufficientRoleException } from '../../../../auth/domain/exceptions/insufficient-role.exception.js';
 import { Reflector } from '@nestjs/core';
 import { RolesGuard } from '../../../../auth/infrastructure/api/guard/roles.guard.js';
 import { ROLES_KEY } from '../../../../auth/infrastructure/api/decorators/roles.decorator.js';
@@ -44,7 +45,7 @@ describe('school routes protected by @Roles(SUPER_ADMIN)', () => {
 
   it.each(routes)('%s answers 403 to a USER', (_label, controller, method) => {
     expect(() => guard.canActivate(contextFor(controller, method, GlobalRole.USER))).toThrow(
-      ForbiddenException,
+      InsufficientRoleException,
     );
   });
 

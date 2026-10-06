@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { InvalidAuthRequestException } from '../../../domain/exceptions/invalid-auth-request.exception.js';
 
 export class ChangePasswordDto {
   private constructor(
@@ -19,9 +19,10 @@ export class ChangePasswordDto {
       !body.newPassword ||
       body.newPassword.length > 1024
     )
-      throw new BadRequestException(
-        'currentPassword and newPassword are required',
-      );
+      throw new InvalidAuthRequestException([
+        'currentPassword',
+        'newPassword',
+      ]);
     return new ChangePasswordDto(body.currentPassword, body.newPassword);
   }
 }

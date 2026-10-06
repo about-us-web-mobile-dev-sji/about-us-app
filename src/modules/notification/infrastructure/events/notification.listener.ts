@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { NOTIFICATION_APP_URL } from '../notification.config.js';
 import { OnEvent } from '@nestjs/event-emitter';
 import { createHash } from 'node:crypto';
 import { SendNotification } from '../../application/use-cases/commands/send-notification/send-notification.js';
 import { NotificationType } from '../../domain/enums/notification-type.enum.js';
+import { SendInvitationEmail } from '../../application/use-cases/commands/send-invitation-email/send-invitation-email.js';
 import { UserAccountService } from '../../../user/application/user-account.service.js';
 import type { InvitationSentEvent } from '../../../school/application/events/invitation-sent.event.js';
 import type { InvitationAcceptedEvent } from '../../../school/application/events/invitation-accepted.event.js';
@@ -21,7 +23,18 @@ export class NotificationListener {
   constructor(
     private readonly sendNotification: SendNotification,
     private readonly users: UserAccountService,
+    @Inject(SendInvitationEmail)
+    private readonly sendInvitationEmail: SendInvitationEmail,
+    @Inject(NOTIFICATION_APP_URL) private readonly appUrl: string,
   ) {}
+
+  /** UC-16: link to the web page that accepts the invitation after Google sign-in. */
+  private acceptUrl(event: InvitationSentEvent): string {
+    const url = new URL('/invitations/accept', this.appUrl);
+    url.searchParams.set('schoolId', event.schoolId);
+    url.searchParams.set('token', event.invitationToken);
+    return url.href;
+  }
 
   private async dispatch(
     key: string,
@@ -72,8 +85,11 @@ export class NotificationListener {
         event.email,
       );
       if (!recipient) {
-        this.logger.warn({
-          event: 'notification.recipient_unavailable',
+        // No account yet: the invitee creates it by accepting the invitation.
+        await this.sendInvitationEmail.handle({
+          email: event.email,
+          schoolName: event.schoolName,
+          acceptUrl: this.acceptUrl(event),
         });
         return;
       }
@@ -85,7 +101,7 @@ export class NotificationListener {
           organizationId: event.schoolId,
           payload: {
             schoolName: event.schoolName,
-            invitationToken: event.invitationToken,
+            acceptUrl: this.acceptUrl(event),
           },
         },
       );

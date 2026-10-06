@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { UnauthorizedException } from '@nestjs/common';
+import { InvalidRefreshTokenException } from '../../domain/exceptions/invalid-refresh-token.exception.js';
+import { InvalidSessionException } from '../../domain/exceptions/invalid-session.exception.js';
 import { IsNull, MoreThan, Repository } from 'typeorm';
 import type { RefreshTokenGateway } from '../../application/gateways/i-refresh-token.gateway.js';
 import type { RefreshToken } from '../../domain/entities/refresh-token.js';
@@ -14,7 +15,7 @@ export class OpaqueRefreshTokenGateway implements RefreshTokenGateway {
 
   private hash(raw: string) {
     if (!/^[A-Za-z0-9_-]{43}$/.test(raw))
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new InvalidRefreshTokenException();
     return createHash('sha256').update(raw).digest('hex');
   }
 
@@ -30,7 +31,7 @@ export class OpaqueRefreshTokenGateway implements RefreshTokenGateway {
       { refreshTokenHash: this.hash(raw) },
     );
     if (result.affected !== 1)
-      throw new UnauthorizedException('Session unavailable');
+      throw new InvalidSessionException();
     return raw;
   }
 
@@ -41,7 +42,7 @@ export class OpaqueRefreshTokenGateway implements RefreshTokenGateway {
       expiresAt: MoreThan(Date.now()),
     });
     if (!session)
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new InvalidRefreshTokenException();
     return {
       tokenUse: 'refresh' as const,
       jti: this.hash(raw),
@@ -65,9 +66,7 @@ export class OpaqueRefreshTokenGateway implements RefreshTokenGateway {
       { refreshTokenHash: this.hash(replacement) },
     );
     if (result.affected !== 1)
-      throw new UnauthorizedException(
-        'Refresh token already consumed or expired',
-      );
+      throw new InvalidRefreshTokenException();
     return replacement;
   }
 }
