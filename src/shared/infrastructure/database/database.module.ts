@@ -3,6 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSource, type DataSourceOptions } from 'typeorm';
 import databaseConfig from '../../../config/data-base.config.js';
+import { MoveAuthTablesToAuthenticationSchema1791331200000 } from './migrations/1791331200000-MoveAuthTablesToAuthenticationSchema.js';
+
+/** Applied in order at start-up, before any query (and before synchronize). */
+const MIGRATIONS = [MoveAuthTablesToAuthenticationSchema1791331200000];
 
 @Module({
   imports: [
@@ -18,6 +22,8 @@ import databaseConfig from '../../../config/data-base.config.js';
         database: config.getOrThrow<string>('database.database'), // Maintient la correspondance avec data-base.config.ts
         synchronize: config.getOrThrow<boolean>('database.synchronize'),
         autoLoadEntities: true,
+        migrations: MIGRATIONS,
+        migrationsRun: true,
       }),
       dataSourceFactory: async (options) => {
         if (!options) throw new Error('Missing database configuration');
@@ -30,7 +36,8 @@ import databaseConfig from '../../../config/data-base.config.js';
 
           if (options.synchronize) {
             // Création des schémas PostgreSQL
-            await dataSource.query('CREATE SCHEMA IF NOT EXISTS auth');
+            // Not `auth`: Supabase reserves that schema.
+            await dataSource.query('CREATE SCHEMA IF NOT EXISTS authentication');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS "user"');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS event');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS school');
