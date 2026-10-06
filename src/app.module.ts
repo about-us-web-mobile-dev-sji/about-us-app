@@ -1,21 +1,62 @@
+import { NotificationModule } from './modules/notification/notification.module.js';
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
 import { createObserveModule } from '@nestjs/observe';
+
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { SchoolModule } from './modules/school/school.module.js';
+import { SpacesModule } from './modules/spaces/spaces.module.js';
+import superAdminConfig from './config/super-admin.config.js';
+import databaseConfig from './config/data-base.config.js';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
+import { AuthModule } from './modules/auth/auth.module.js';
+import { UserModule } from './modules/user/user.module.js';
+import { EventModule } from './modules/event/event.module.js';
+import { APP_FILTER } from '@nestjs/core';
+import { GlobalExceptionFilter } from './shared/infrastructure/http/global-exception.filter.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
+const observeEnabled =
+  process.env.OBSERVE_APP_KEY !== undefined &&
+  process.env.OBSERVE_APP_SECRET !== undefined;
+
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'about-us',
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [superAdminConfig, databaseConfig],
     }),
+
+    DatabaseModule,
+
+    EventEmitterModule.forRoot(),
+
+    UserModule,
+    AuthModule,
+    SchoolModule,
+    SpacesModule,
+    EventModule,
+    NotificationModule,
+
+    ...(observeEnabled
+      ? [
+          ObserveModule.forRoot({
+            appKey: process.env.OBSERVE_APP_KEY!,
+            appSecret: process.env.OBSERVE_APP_SECRET!,
+            serviceId: 'about-us',
+          }),
+        ]
+      : []),
   ],
+
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+  ],
 })
 export class AppModule {}

@@ -1,0 +1,29 @@
+import { Injectable } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import type { UUID } from 'node:crypto';
+import { EventLogService } from '../../../event/application/services/event-log.service.js';
+import { InvitationAcceptedEvent } from '../../application/events/invitation-accepted.event.js';
+
+@Injectable()
+export class InvitationAcceptedListener {
+  constructor(private readonly eventLog: EventLogService) {}
+
+  @OnEvent('invitation.accepted')
+  async handle(event: InvitationAcceptedEvent) {
+    console.log(
+      `[ÉVÉNEMENT REÇU] L'invitation pour l'école "${event.schoolName}" (${event.schoolId}) a été acceptée par ${event.adminUserId} -> l'invitant ${event.inviterId} est informé à ${event.acceptedAt.toISOString()}`,
+    );
+
+    await this.eventLog.record({
+      name: 'invitation.accepted',
+      message: `L'invitation pour l'école "${event.schoolName}" a été acceptée.`,
+      entityType: 'school',
+      entityId: event.schoolId as UUID,
+      payload: {
+        inviterId: event.inviterId,
+        schoolName: event.schoolName,
+        adminUserId: event.adminUserId,
+      },
+    });
+  }
+}
