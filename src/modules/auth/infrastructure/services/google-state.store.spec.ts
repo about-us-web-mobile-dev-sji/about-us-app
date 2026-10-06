@@ -6,7 +6,7 @@ afterEach(() => vi.useRealTimers());
 describe('GoogleStateStore', () => {
   it('binds state to a browser, expires it after five minutes and consumes it once', () => {
     vi.useFakeTimers();
-    const store = new GoogleStateStore(true);
+    const store = new GoogleStateStore(true, '/auth/web/google/callback');
     const cookie = vi.fn();
     const req = {
       headers: {},

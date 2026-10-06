@@ -5,6 +5,7 @@ import { Strategy, type Profile } from 'passport-google-oauth20';
 import { ConfigService } from '@nestjs/config';
 import type { GoogleIdentity } from '../../application/models/google-identity.js';
 import { GoogleStateStore } from './google-state.store.js';
+import { googleCallbackPath } from '../api/google-return-url.js';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -15,7 +16,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       callbackURL: config.getOrThrow<string>('google.callbackUrl'),
       scope: ['openid', 'email', 'profile'],
       state: true,
-      store: new GoogleStateStore(config.get('NODE_ENV') === 'production'),
+      store: new GoogleStateStore(
+        config.get('NODE_ENV') === 'production',
+        googleCallbackPath(config),
+      ),
     });
   }
 

@@ -12,9 +12,12 @@ export class GoogleStateStore {
     string,
     { browser: string; expiresAt: number }
   >();
-  constructor(private readonly secure: boolean) {}
+  constructor(
+    private readonly secure: boolean,
+    /** Callback path as seen by the browser (proxy prefix included). */
+    private readonly path: string,
+  ) {}
   private readonly cookie = 'google_oauth_state';
-  private readonly path = '/auth/web/google/callback';
 
   store(
     req: Request,
