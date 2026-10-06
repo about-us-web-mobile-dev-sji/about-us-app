@@ -2,6 +2,7 @@ import type { Space } from '../entities/space.js';
 import type { SpaceKind } from '../enums/space-kind.js';
 import type { SpaceStatus } from '../enums/space-status.js';
 import type { UUID } from 'node:crypto';
+import type { PaginatedResult, PaginationParams } from '../../../../shared/domain/pagination.js';
 
 export interface SpaceFilters {
   schoolId?: UUID;
@@ -15,19 +16,6 @@ export interface SpaceFilters {
   managerId?: UUID;
   manageableBy?: UUID;
   ancestorId?: UUID;
-}
-
-export interface PaginationParams {
-  page: number;
-  limit: number;
-}
-
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
 }
 
 export const SPACE_REPOSITORY = Symbol('SPACE_REPOSITORY');

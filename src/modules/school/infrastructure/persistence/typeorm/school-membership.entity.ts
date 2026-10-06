@@ -1,8 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { MembershipRole } from '../../../domain/enums/membership-role.enum.js';
+import {
+  Entity,
+  Column,
+  JoinTable,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { MembershipStatus } from '../../../domain/enums/membership-status.enum.js';
-import type { SchoolAction } from '../../../domain/enums/school-action.enum.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
+import { SchoolRoleEntity } from './school-role.entity.js';
 
 
 @Entity({ schema: 'school', name: 'school_memberships' })
@@ -16,12 +21,16 @@ export class SchoolMembershipEntity {
   @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
-  @Column({
-    type: 'enum',
-    enum: MembershipRole,
-    default: MembershipRole.SCHOOL_MEMBER,
+  @ManyToMany(() => SchoolRoleEntity, (role) => role.memberships, {
+    eager: true,
   })
-  role!: MembershipRole;
+  @JoinTable({
+    schema: 'school',
+    name: 'school_membership_roles',
+    joinColumn: { name: 'membership_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'school_role_id', referencedColumnName: 'id' },
+  })
+  roles!: SchoolRoleEntity[];
 
   @Column({
     type: 'enum',
@@ -51,11 +60,4 @@ export class SchoolMembershipEntity {
   @Column({ type: 'uuid', nullable: true, name: 'revoked_by' })
   revokedBy!: string | null;
 
-  @Column({
-    type: 'jsonb',
-    name: 'granted_permissions',
-    nullable: false,
-    default: () => "'[]'::jsonb",
-  })
-  grantedPermissions!: SchoolAction[];
 }

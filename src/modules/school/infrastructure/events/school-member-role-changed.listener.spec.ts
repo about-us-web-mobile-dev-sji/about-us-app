@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import type { INestApplication } from '@nestjs/common';
 import { SchoolMemberRoleChangedListener } from './school-member-role-changed.listener.js';
-import { SchoolMemberRoleChangedEvent } from './school-member-role-changed.event.js';
+import { SchoolMemberRoleChangedEvent } from '../../application/events/school-member-role-changed.event.js';
 import { EventLogService } from '../../../event/application/services/event-log.service.js';
 
 describe('SchoolMemberRoleChangedListener', () => {
@@ -27,8 +27,9 @@ describe('SchoolMemberRoleChangedListener', () => {
         '11111111-1111-4111-8111-111111111111',
         'École test',
         'member-1',
-        'SCHOOL_MEMBER',
-        'SCHOOL_ADMIN',
+        'role-1',
+        'Personnel',
+        'ASSIGNED',
         'root',
       ),
     );
@@ -40,8 +41,9 @@ describe('SchoolMemberRoleChangedListener', () => {
         entityId: '11111111-1111-4111-8111-111111111111',
         payload: expect.objectContaining({
           memberUserId: 'member-1',
-          previousRole: 'SCHOOL_MEMBER',
-          newRole: 'SCHOOL_ADMIN',
+          roleId: 'role-1',
+          roleName: 'Personnel',
+          change: 'ASSIGNED',
           changedBy: 'root',
         }),
       }),

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { UUID } from 'node:crypto';
 import { EventLogService } from '../../../event/application/services/event-log.service.js';
-import { InvitationSentEvent } from './invitation-sent.event.js';
+import { InvitationSentEvent } from '../../application/events/invitation-sent.event.js';
 
 @Injectable()
 export class InvitationSentListener {

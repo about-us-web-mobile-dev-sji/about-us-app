@@ -4,7 +4,7 @@ import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import type { INestApplication } from '@nestjs/common';
 import { InvitationAcceptedListener } from './invitation-accepted.listener.js';
 import { EventLogService } from '../../../event/application/services/event-log.service.js';
-import { InvitationAcceptedEvent } from './invitation-accepted.event.js';
+import { InvitationAcceptedEvent } from '../../application/events/invitation-accepted.event.js';
 
 describe('InvitationAcceptedListener', () => {
   let app: INestApplication;

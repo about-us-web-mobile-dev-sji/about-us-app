@@ -49,9 +49,8 @@ export class SchoolInvitationController {
     const output = await this.inviteMember.handle({
       schoolId,
       email: dto.email,
-      role: dto.role,
+      roleId: dto.roleId,
       performedBy,
-      performedByGlobalRole: req.auth.user.globalRole,
     });
     return InvitationResponse.fromOutput(output);
   }

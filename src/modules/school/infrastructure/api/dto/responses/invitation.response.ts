@@ -4,7 +4,7 @@ export class InvitationResponse {
   id!: string;
   schoolId!: string;
   email!: string;
-  role!: string;
+  roleId!: string;
   status!: string;
   expiresAt!: Date;
 

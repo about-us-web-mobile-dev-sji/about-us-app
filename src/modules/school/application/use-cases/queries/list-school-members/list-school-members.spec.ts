@@ -1,197 +1,160 @@
-import { describe, expect, it } from 'vitest';
-import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
-import { School } from '../../../../domain/entities/school.entity.js';
-import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
+import { describe, expect, it, vi } from 'vitest';
+import { ListSchoolMembersUseCase } from './list-school-members.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
-import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
+import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
+import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
-import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
-import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
-import { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
-import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
-import { ListSchoolMembersUseCase } from './list-school-members.js';
+import {
+  ROLE,
+  SCHOOL_ID,
+  customRole,
+  defaultRoles,
+  membershipOf,
+  world,
+} from '../../../testing/school-test-helpers.js';
 
 describe('ListSchoolMembersUseCase', () => {
-  const schoolId = '11111111-1111-4111-8111-111111111111';
-  const school = School.reconstitute({
-    id: schoolId as never,
-    name: 'École test',
-    address: null,
-    phoneNumber: null,
-    email: null,
-    website: null,
-    status: SchoolStatus.ACTIVE,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    createdBy: 'root',
-  });
-  const m = (
-    userId: string,
-    role: MembershipRole,
-    status = MembershipStatus.ACTIVE,
-    day = 1,
-    grantedPermissions: SchoolAction[] = [],
-  ) =>
-    SchoolMembership.reconstitute({
-      id: `m-${userId}`,
-      schoolId,
-      userId,
-      role,
-      status,
-      grantedBy: 'root',
-      grantedAt: new Date(2026, 0, day),
-      revokedAt: null,
-      revokedBy: null,
-      grantedPermissions,
-    });
-
+  const detailer = customRole('role-detail', 'Secrétaire', [SchoolAction.VIEW_MEMBER_DETAILS]);
   const users = {
     authenticationProfile: async (id: string) => ({
-      id,
-      email: `${id}@school.test`,
-      globalRole: GlobalRole.USER,
-      firstName: `First-${id}`,
-      lastName: `Last-${id}`,
+      email: `${id}@ecole.test`,
+      firstName: id.toUpperCase(),
+      lastName: 'Test',
     }),
   } as unknown as UserAccountService;
 
-  const setup = (memberships: SchoolMembership[], knownSchool: School | null = school) => {
-    const schools = { findById: async () => knownSchool } as unknown as SchoolRepository;
-    const repo = {
-      findBySchool: async (sId: string) => memberships.filter((x) => x.schoolId === sId),
-      findBySchoolAndUser: async (sId: string, uId: string) =>
-        memberships.find((x) => x.schoolId === sId && x.userId === uId) ?? null,
-    } as unknown as SchoolMembershipRepository;
-    return new ListSchoolMembersUseCase(schools, repo, new SchoolAuthorizationService(repo, schools), users);
+  const setup = () => {
+    const w = world(
+      [
+        membershipOf('student', [ROLE.student]),
+        membershipOf('admin', [ROLE.admin]),
+        membershipOf('staff', [ROLE.staff, ROLE.student]),
+        membershipOf('secretary', ['role-detail']),
+        membershipOf('suspended', [ROLE.student], MembershipStatus.SUSPENDED),
+        membershipOf('revoked', [ROLE.student], MembershipStatus.REVOKED),
+      ],
+      { roles: [...defaultRoles(), detailer] },
+    );
+    const paginated = vi.spyOn(w.memberships.repo, 'findBySchoolPaginated');
+    const useCase = new ListSchoolMembersUseCase(
+      w.schools,
+      w.memberships.repo,
+      w.roles.repo,
+      w.authorization,
+      users,
+    );
+    return { useCase, paginated };
   };
 
-  const roster = () => [
-    m('member-1', MembershipRole.SCHOOL_MEMBER, MembershipStatus.ACTIVE, 3),
-    m('admin-1', MembershipRole.SCHOOL_ADMIN, MembershipStatus.ACTIVE, 2),
-    m('suspended-1', MembershipRole.SCHOOL_MEMBER, MembershipStatus.SUSPENDED, 4),
-    m('revoked-1', MembershipRole.SCHOOL_MEMBER, MembershipStatus.REVOKED, 5),
-  ];
+  it('gives the administrator the full view with named roles, without revoked members', async () => {
+    const { useCase } = setup();
+    const out = await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin' });
 
-  it('lists the administrator AND the members (admin first, REVOKED hidden) for an admin', async () => {
-    const { members } = await setup(roster()).handle({
-      schoolId,
-      performedBy: 'admin-1',
-      performedByGlobalRole: GlobalRole.USER,
-    });
-    expect(members.map((x) => x.userId)).toEqual(['admin-1', 'member-1', 'suspended-1']);
-    expect(members[0]).toMatchObject({ role: MembershipRole.SCHOOL_ADMIN, status: MembershipStatus.ACTIVE });
-    expect(members[1]).toMatchObject({ role: MembershipRole.SCHOOL_MEMBER });
-  });
-
-  it('gives the FULL view (email, status, names) to an admin', async () => {
-    const out = await setup(roster()).handle({
-      schoolId,
-      performedBy: 'admin-1',
-      performedByGlobalRole: GlobalRole.USER,
-    });
     expect(out.view).toBe('full');
-    expect(out.members[0]).toMatchObject({
-      email: 'admin-1@school.test',
-      firstName: 'First-admin-1',
-      status: MembershipStatus.ACTIVE,
-    });
+    const items = out.items as Array<{ userId: string; email: string | null; roles: Array<{ name: string }> }>;
+    expect(items.map((m) => m.userId)).toContain('admin');
+    expect(items.map((m) => m.userId)).not.toContain('revoked');
+    expect(items.find((m) => m.userId === 'suspended')).toBeDefined();
+    expect(items.find((m) => m.userId === 'staff')?.roles.map((r) => r.name).sort()).toEqual(['Personnel', 'Élève']);
+    expect(items.find((m) => m.userId === 'admin')?.email).toBe('admin@ecole.test');
+    expect(out).toMatchObject({ page: 1, limit: 20, total: items.length, totalPages: 1 });
   });
 
-  it('gives the REDUCED view (name, role, ACTIVE only, no email, no status) to a VIEW_MEMBERS delegate', async () => {
-    const withDelegate = [...roster(), m('delegate-1', MembershipRole.SCHOOL_MEMBER, MembershipStatus.ACTIVE, 6, [SchoolAction.VIEW_MEMBERS])];
-    const out = await setup(withDelegate).handle({
-      schoolId,
-      performedBy: 'delegate-1',
-      performedByGlobalRole: GlobalRole.USER,
-      status: MembershipStatus.SUSPENDED, // ignored in the reduced view
+  it('filters by status and role in the full view', async () => {
+    const { useCase } = setup();
+    const revoked = await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin', status: MembershipStatus.REVOKED });
+    expect(revoked.items.map((m) => m.userId)).toEqual(['revoked']);
+    const staff = await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin', roleId: ROLE.staff });
+    expect(staff.items.map((m) => m.userId)).toEqual(['staff']);
+  });
+
+  it('paginates', async () => {
+    const { useCase } = setup();
+    const first = await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin', pagination: { page: 1, limit: 2 } });
+    const second = await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin', pagination: { page: 2, limit: 2 } });
+    expect(first.items).toHaveLength(2);
+    expect(second.items).toHaveLength(2);
+    expect(first.totalPages).toBe(3);
+    expect(first.total).toBe(5);
+    expect(first.items.map((m) => m.userId)).not.toEqual(second.items.map((m) => m.userId));
+  });
+
+  it('forwards the search, and searches emails only in the full view', async () => {
+    const { useCase, paginated } = setup();
+    await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin', search: '  ali  ' });
+    expect(paginated).toHaveBeenLastCalledWith(
+      SCHOOL_ID,
+      expect.objectContaining({ search: 'ali', includeEmailInSearch: true }),
+      { page: 1, limit: 20 },
+    );
+    await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'staff', search: 'ali' });
+    expect(paginated).toHaveBeenLastCalledWith(
+      SCHOOL_ID,
+      expect.objectContaining({ search: 'ali', includeEmailInSearch: false }),
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it('gives VIEW_MEMBER_DETAILS holders the full view', async () => {
+    const { useCase } = setup();
+    expect((await useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'secretary' })).view).toBe('full');
+  });
+
+  it('gives VIEW_MEMBERS holders a reduced view: active members only, roles, no email, no status', async () => {
+    const { useCase } = setup();
+    const out = await useCase.handle({
+      schoolId: SCHOOL_ID,
+      performedBy: 'staff',
+      status: MembershipStatus.SUSPENDED,
     });
+
     expect(out.view).toBe('reduced');
-    expect(out.members.map((x) => x.userId)).toEqual(['admin-1', 'member-1', 'delegate-1']);
-    for (const member of out.members) {
-      expect(Object.keys(member).sort()).toEqual(['firstName', 'lastName', 'role', 'userId']);
+    const ids = out.items.map((m) => m.userId);
+    expect(ids).toContain('admin');
+    expect(ids).not.toContain('suspended');
+    expect(ids).not.toContain('revoked');
+    for (const member of out.items) {
+      expect(member).not.toHaveProperty('email');
+      expect(member).not.toHaveProperty('status');
+      expect(member).toHaveProperty('roles');
     }
-    expect(out.members[0]).toEqual({
-      userId: 'admin-1',
-      firstName: 'First-admin-1',
-      lastName: 'Last-admin-1',
-      role: MembershipRole.SCHOOL_ADMIN,
-    });
   });
 
-  it('gives the FULL view to a VIEW_MEMBER_DETAILS delegate', async () => {
-    const withDelegate = [...roster(), m('delegate-1', MembershipRole.SCHOOL_MEMBER, MembershipStatus.ACTIVE, 6, [SchoolAction.VIEW_MEMBER_DETAILS])];
-    const out = await setup(withDelegate).handle({
-      schoolId,
-      performedBy: 'delegate-1',
-      performedByGlobalRole: GlobalRole.USER,
-    });
-    expect(out.view).toBe('full');
-    expect(out.members[0]).toHaveProperty('email');
+  it('refuses a student, a suspended administrator and a stranger', async () => {
+    const { useCase } = setup();
+    for (const performedBy of ['student', 'suspended', 'ghost']) {
+      await expect(useCase.handle({ schoolId: SCHOOL_ID, performedBy })).rejects.toBeInstanceOf(
+        SchoolMembershipActionForbiddenException,
+      );
+    }
   });
 
-  it('answers 403 to a plain member without permission and to a suspended delegate', async () => {
-    const forbidden = SchoolMembershipActionForbiddenException;
+  it.each([
+    [{ pagination: { page: 0, limit: 10 } }],
+    [{ pagination: { page: 1, limit: 0 } }],
+    [{ pagination: { page: 1, limit: 101 } }],
+    [{ roleId: '  ' }],
+    [{ search: 'x'.repeat(201) }],
+  ])('rejects invalid parameters %j', async (extra) => {
+    const { useCase } = setup();
     await expect(
-      setup(roster()).handle({ schoolId, performedBy: 'member-1', performedByGlobalRole: GlobalRole.USER }),
-    ).rejects.toBeInstanceOf(forbidden);
-    await expect(
-      setup([m('delegate-1', MembershipRole.SCHOOL_MEMBER, MembershipStatus.SUSPENDED, 1, [SchoolAction.VIEW_MEMBERS])]).handle({
-        schoolId,
-        performedBy: 'delegate-1',
-        performedByGlobalRole: GlobalRole.USER,
-      }),
-    ).rejects.toBeInstanceOf(forbidden);
+      useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin', ...extra }),
+    ).rejects.toBeInstanceOf(InvalidSchoolMembershipException);
   });
 
-  it('lets a super admin without membership view the list, and is absent from it', async () => {
-    const { members } = await setup(roster()).handle({
-      schoolId,
-      performedBy: 'root',
-      performedByGlobalRole: GlobalRole.SUPER_ADMIN,
-    });
-    expect(members.map((x) => x.userId)).toEqual(['admin-1', 'member-1', 'suspended-1']);
-  });
-
-  it('includes a super admin who does hold a membership', async () => {
-    const { members } = await setup([...roster(), m('root', MembershipRole.SCHOOL_MEMBER)]).handle({
-      schoolId,
-      performedBy: 'root',
-      performedByGlobalRole: GlobalRole.SUPER_ADMIN,
-    });
-    expect(members.map((x) => x.userId)).toContain('root');
-  });
-
-  it('filters by status, and can show REVOKED explicitly', async () => {
-    const useCase = setup(roster());
-    const base = { schoolId, performedBy: 'admin-1', performedByGlobalRole: GlobalRole.USER };
-    expect((await useCase.handle({ ...base, status: MembershipStatus.REVOKED })).members.map((x) => x.userId)).toEqual([
-      'revoked-1',
-    ]);
-    expect((await useCase.handle({ ...base, status: MembershipStatus.SUSPENDED })).members.map((x) => x.userId)).toEqual([
-      'suspended-1',
-    ]);
-  });
-
-  it('refuses a non-member and a suspended admin', async () => {
-    const forbidden = SchoolMembershipActionForbiddenException;
-    await expect(
-      setup(roster()).handle({ schoolId, performedBy: 'stranger', performedByGlobalRole: GlobalRole.USER }),
-    ).rejects.toBeInstanceOf(forbidden);
-    await expect(
-      setup([m('admin-1', MembershipRole.SCHOOL_ADMIN, MembershipStatus.SUSPENDED)]).handle({
-        schoolId,
-        performedBy: 'admin-1',
-        performedByGlobalRole: GlobalRole.USER,
-      }),
-    ).rejects.toBeInstanceOf(forbidden);
-  });
-
-  it('throws when the school does not exist', async () => {
-    await expect(
-      setup([], null).handle({ schoolId, performedBy: 'root', performedByGlobalRole: GlobalRole.SUPER_ADMIN }),
-    ).rejects.toBeInstanceOf(SchoolNotFoundException);
+  it('rejects an unknown school', async () => {
+    const w = world([membershipOf('admin', [ROLE.admin])]);
+    const useCase = new ListSchoolMembersUseCase(
+      { findById: async () => null } as never,
+      w.memberships.repo,
+      w.roles.repo,
+      w.authorization,
+      users,
+    );
+    await expect(useCase.handle({ schoolId: SCHOOL_ID, performedBy: 'admin' })).rejects.toBeInstanceOf(
+      SchoolNotFoundException,
+    );
   });
 });

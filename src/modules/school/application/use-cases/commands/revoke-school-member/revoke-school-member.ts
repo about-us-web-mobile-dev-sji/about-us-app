@@ -1,7 +1,6 @@
 import type { RevokeSchoolMemberInput } from './revoke-school-member.input.js';
 import type { RevokeSchoolMemberOutput } from './revoke-school-member.output.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
 import type { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
@@ -26,12 +25,9 @@ export class RevokeSchoolMemberUseCase {
       throw new InvalidSchoolMembershipException('PerformedBy is required');
     }
 
-    const actor = {
-      userId: input.performedBy,
-      globalRole: input.performedByGlobalRole,
-    };
+    const actor = { userId: input.performedBy };
     await this.authorization.assertCan(actor, SchoolAction.REVOKE_MEMBER, input.schoolId);
-    await this.authorization.assertSchoolWritable(actor, input.schoolId);
+    await this.authorization.assertSchoolWritable(input.schoolId);
 
     const targetMembership = await this.memberships.findBySchoolAndUser(
       input.schoolId,
@@ -40,7 +36,6 @@ export class RevokeSchoolMemberUseCase {
     await this.authorization.assertCanManageTarget(
       actor,
       input.schoolId,
-      input.memberUserId,
       targetMembership,
     );
 
@@ -54,12 +49,6 @@ export class RevokeSchoolMemberUseCase {
       throw new SchoolMembershipNotFoundException(
         input.schoolId,
         input.memberUserId,
-      );
-    }
-
-    if (targetMembership.role === MembershipRole.SCHOOL_ADMIN) {
-      throw new SchoolMembershipActionForbiddenException(
-        "The school administrator's membership cannot be revoked this way; replace the administrator instead",
       );
     }
 

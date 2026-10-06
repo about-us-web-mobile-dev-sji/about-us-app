@@ -1,5 +1,6 @@
 import { EventLog } from '../entities/event-log.js';
 import type { UUID } from 'node:crypto';
+import type { PaginatedResult, PaginationParams } from '../../../../shared/domain/pagination.js';
 
 export const EVENT_LOG_REPOSITORY = Symbol('EVENT_LOG_REPOSITORY');
 
@@ -8,18 +9,8 @@ export interface EventLogFilters {
   search?: string;
 }
 
-export interface EventLogPagination {
-  page: number;
-  limit: number;
-}
-
-export interface PaginatedEventLogs {
-  items: EventLog[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+export type EventLogPagination = PaginationParams;
+export type PaginatedEventLogs = PaginatedResult<EventLog>;
 
 export interface EventLogRepository {
   save(eventLog: EventLog): Promise<void>;

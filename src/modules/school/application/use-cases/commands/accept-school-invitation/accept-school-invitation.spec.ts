@@ -4,7 +4,7 @@ import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolInvitation } from '../../../../domain/entities/school-invitation.entity.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { InvitationStatus } from '../../../../domain/enums/invitation-status.enum.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
+import { ROLE, inMemoryMemberships, inMemoryRoles } from '../../../testing/school-test-helpers.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
@@ -12,9 +12,9 @@ import { SchoolAdministratorAlreadyAssignedException } from '../../../../domain/
 import { SchoolInvitationInvalidException } from '../../../../domain/exceptions/school-invitation-invalid.exception.js';
 import { SchoolInvitationMismatchException } from '../../../../domain/exceptions/school-invitation-mismatch.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
+import { SchoolRoleNotFoundException } from '../../../../domain/exceptions/school-role-not-found.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
-import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 
@@ -29,7 +29,6 @@ describe('AcceptSchoolInvitation', () => {
     School.reconstitute({
       id: schoolId,
       name: 'École test',
-      address: null,
       phoneNumber: null,
       email: invitedEmail,
       website: null,
@@ -44,13 +43,13 @@ describe('AcceptSchoolInvitation', () => {
       email?: string;
       ttlMs?: number;
       schoolId?: string;
-      role?: MembershipRole;
+      roleId?: string;
     } = {},
   ) => {
     const { invitation, token } = SchoolInvitation.issue({
       schoolId: overrides.schoolId ?? schoolId,
       email: overrides.email ?? invitedEmail,
-      role: overrides.role ?? MembershipRole.SCHOOL_ADMIN,
+      roleId: overrides.roleId ?? ROLE.admin,
       invitedBy: inviterId,
       ttlMs: overrides.ttlMs,
     });
@@ -65,14 +64,14 @@ describe('AcceptSchoolInvitation', () => {
 
   const membership = (o: {
     userId: string;
-    role?: MembershipRole;
+    roleId?: string;
     status?: MembershipStatus;
   }) =>
     SchoolMembership.reconstitute({
       id: `membership-${o.userId}`,
       schoolId,
       userId: o.userId,
-      role: o.role ?? MembershipRole.SCHOOL_MEMBER,
+      roleIds: [o.roleId ?? ROLE.student],
       status: o.status ?? MembershipStatus.ACTIVE,
       grantedBy: inviterId,
       grantedAt: new Date(),
@@ -88,8 +87,7 @@ describe('AcceptSchoolInvitation', () => {
   }) => {
     const school = o.school === undefined ? makeSchool() : o.school;
     let invitations = [...(o.invitations ?? [])];
-    let memberships = [...(o.memberships ?? [])];
-    let nextId = 1;
+    const memberships = [...(o.memberships ?? [])];
 
     const schools = {
       findById: async (id: string) =>
@@ -108,33 +106,9 @@ describe('AcceptSchoolInvitation', () => {
       },
     };
 
-    const membershipRepo: SchoolMembershipRepository = {
-      findById: async (id) => memberships.find((m) => m.id === id) ?? null,
-      findBySchoolAndUser: async (sId, userId) =>
-        memberships.find((m) => m.schoolId === sId && m.userId === userId) ??
-        null,
-      findActiveByUser: async () => [],
-      findActiveAdminBySchool: async (sId) =>
-        memberships.find(
-          (m) =>
-            m.schoolId === sId &&
-            m.role === MembershipRole.SCHOOL_ADMIN &&
-            m.status === MembershipStatus.ACTIVE,
-        ) ?? null,
-      findBySchool: async (sId) => memberships.filter((m) => m.schoolId === sId),
-      save: async (m) => {
-        const saved = m.id
-          ? m
-          : SchoolMembership.reconstitute({
-              ...m.toPrimitives(),
-              id: `new-membership-${nextId++}`,
-            });
-        memberships = memberships.some((x) => x.id === saved.id)
-          ? memberships.map((x) => (x.id === saved.id ? saved : x))
-          : [...memberships, saved];
-        return saved;
-      },
-    };
+    const store = inMemoryMemberships(memberships);
+    const membershipRepo = store.repo;
+    const roles = inMemoryRoles();
 
     const accounts = o.accounts ?? { [invitedUserId]: invitedEmail };
     const users = {
@@ -149,11 +123,12 @@ describe('AcceptSchoolInvitation', () => {
         schools,
         invitationRepo,
         membershipRepo,
+        roles.repo,
         users,
         emitter as never,
       ),
       emitter,
-      memberships: () => memberships,
+      memberships: () => store.all(),
       invitations: () => invitations,
     };
   };
@@ -174,7 +149,7 @@ describe('AcceptSchoolInvitation', () => {
 
     expect(school.name).toBe('École test');
     expect(created.userId).toBe(invitedUserId);
-    expect(created.role).toBe(MembershipRole.SCHOOL_ADMIN);
+    expect(created.roleIds).toEqual([ROLE.admin]);
     expect(created.status).toBe(MembershipStatus.ACTIVE);
     expect(created.grantedBy).toBe(inviterId);
     expect(ctx.memberships()).toHaveLength(1);
@@ -204,7 +179,7 @@ describe('AcceptSchoolInvitation', () => {
       userId: invitedUserId,
     });
 
-    expect(created.role).toBe(MembershipRole.SCHOOL_ADMIN);
+    expect(created.roleIds).toEqual([ROLE.admin]);
   });
 
   it('promotes an existing member and reactivates a suspended membership', async () => {
@@ -222,7 +197,7 @@ describe('AcceptSchoolInvitation', () => {
       userId: invitedUserId,
     });
 
-    expect(promoted.role).toBe(MembershipRole.SCHOOL_ADMIN);
+    expect(promoted.roleIds).toEqual([ROLE.student, ROLE.admin]);
     expect(promoted.status).toBe(MembershipStatus.ACTIVE);
     expect(ctx.memberships()).toHaveLength(1);
   });
@@ -320,7 +295,7 @@ describe('AcceptSchoolInvitation', () => {
     const ctx = setup({
       invitations: [invitation],
       memberships: [
-        membership({ userId: otherUserId, role: MembershipRole.SCHOOL_ADMIN }),
+        membership({ userId: otherUserId, roleId: ROLE.admin }),
       ],
     });
 
@@ -348,11 +323,11 @@ describe('AcceptSchoolInvitation', () => {
 
   describe('member invitations', () => {
     it('adds the invitee as a plain member, even when the school has an admin', async () => {
-      const { invitation, token } = issue({ role: MembershipRole.SCHOOL_MEMBER });
+      const { invitation, token } = issue({ roleId: ROLE.student });
       const ctx = setup({
         invitations: [invitation],
         memberships: [
-          membership({ userId: otherUserId, role: MembershipRole.SCHOOL_ADMIN }),
+          membership({ userId: otherUserId, roleId: ROLE.admin }),
         ],
       });
 
@@ -362,18 +337,18 @@ describe('AcceptSchoolInvitation', () => {
         userId: invitedUserId,
       });
 
-      expect(created.role).toBe(MembershipRole.SCHOOL_MEMBER);
+      expect(created.roleIds).toEqual([ROLE.student]);
       expect(created.status).toBe(MembershipStatus.ACTIVE);
       expect(created.grantedBy).toBe(inviterId);
       expect(ctx.memberships()).toHaveLength(2);
     });
 
     it('never demotes an administrator who accepts a member invitation', async () => {
-      const { invitation, token } = issue({ role: MembershipRole.SCHOOL_MEMBER });
+      const { invitation, token } = issue({ roleId: ROLE.student });
       const ctx = setup({
         invitations: [invitation],
         memberships: [
-          membership({ userId: invitedUserId, role: MembershipRole.SCHOOL_ADMIN }),
+          membership({ userId: invitedUserId, roleId: ROLE.admin }),
         ],
       });
 
@@ -383,11 +358,11 @@ describe('AcceptSchoolInvitation', () => {
         userId: invitedUserId,
       });
 
-      expect(kept.role).toBe(MembershipRole.SCHOOL_ADMIN);
+      expect(kept.roleIds).toEqual([ROLE.admin, ROLE.student]);
     });
 
     it('reactivates an inactive member', async () => {
-      const { invitation, token } = issue({ role: MembershipRole.SCHOOL_MEMBER });
+      const { invitation, token } = issue({ roleId: ROLE.student });
       const ctx = setup({
         invitations: [invitation],
         memberships: [
@@ -404,8 +379,34 @@ describe('AcceptSchoolInvitation', () => {
       expect(back.status).toBe(MembershipStatus.ACTIVE);
     });
 
+    it('adds the invited role to the roles a member already holds', async () => {
+      const { invitation, token } = issue({ roleId: ROLE.staff });
+      const ctx = setup({
+        invitations: [invitation],
+        memberships: [membership({ userId: invitedUserId })],
+      });
+
+      const { membership: updated } = await ctx.useCase.handle({
+        schoolId,
+        token,
+        userId: invitedUserId,
+      });
+
+      expect(updated.roleIds).toEqual([ROLE.student, ROLE.staff]);
+    });
+
+    it('refuses an invitation whose role no longer exists', async () => {
+      const { invitation, token } = issue({ roleId: 'deleted-role' });
+      const ctx = setup({ invitations: [invitation] });
+
+      await expect(
+        ctx.useCase.handle({ schoolId, token, userId: invitedUserId }),
+      ).rejects.toBeInstanceOf(SchoolRoleNotFoundException);
+      expect(ctx.memberships()).toHaveLength(0);
+    });
+
     it('cannot be used to lift a suspension', async () => {
-      const { invitation, token } = issue({ role: MembershipRole.SCHOOL_MEMBER });
+      const { invitation, token } = issue({ roleId: ROLE.student });
       const ctx = setup({
         invitations: [invitation],
         memberships: [

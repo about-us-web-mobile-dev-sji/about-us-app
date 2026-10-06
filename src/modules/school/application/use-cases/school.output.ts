@@ -1,9 +1,8 @@
 import type { School } from '../../domain/entities/school.entity.js';
 import type { SchoolMembership } from '../../domain/entities/school-membership.entity.js';
-import type { MembershipRole } from '../../domain/enums/membership-role.enum.js';
 import type { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
-import type { SchoolAction } from '../../domain/enums/school-action.enum.js';
 import type { SchoolStatus } from '../../domain/enums/school-status.enum.js';
+import type { SchoolRole } from '../../domain/entities/school-role.entity.js';
 
 export interface SchoolOutput {
   id: string;
@@ -21,13 +20,34 @@ export interface SchoolMembershipOutput {
   id: string;
   schoolId: string;
   userId: string;
-  role: MembershipRole;
   status: MembershipStatus;
   grantedBy: string | null;
   grantedAt: Date;
   revokedAt: Date | null;
   revokedBy: string | null;
-  grantedPermissions: SchoolAction[];
+  roleIds: string[];
+}
+
+export interface SchoolRoleOutput {
+  id: string;
+  schoolId: string;
+  key: string | null;
+  name: string;
+  description: string | null;
+  permissions: string[];
+  isSystem: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SchoolRoleSummary {
+  id: string;
+  key: string | null;
+  name: string;
+}
+
+export function toSchoolRoleSummary(role: SchoolRole): SchoolRoleSummary {
+  return { id: role.id, key: role.key, name: role.name };
 }
 
 export function toSchoolOutput(school: School): SchoolOutput {
@@ -38,5 +58,20 @@ export function toSchoolOutput(school: School): SchoolOutput {
 export function toSchoolMembershipOutput(
   membership: SchoolMembership,
 ): SchoolMembershipOutput {
-  return membership.toPrimitives();
+  const primitives = membership.toPrimitives();
+  return { ...primitives, roleIds: [...membership.roleIds] };
+}
+
+export function toSchoolRoleOutput(role: SchoolRole): SchoolRoleOutput {
+  return {
+    id: role.id,
+    schoolId: role.schoolId,
+    key: role.key,
+    name: role.name,
+    description: role.description,
+    permissions: [...role.permissions],
+    isSystem: role.isSystem,
+    createdAt: role.toPrimitives().createdAt,
+    updatedAt: role.toPrimitives().updatedAt,
+  };
 }

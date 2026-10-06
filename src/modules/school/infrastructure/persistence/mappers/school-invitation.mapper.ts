@@ -7,7 +7,7 @@ export class SchoolInvitationMapper {
       id: entity.id,
       schoolId: entity.schoolId,
       email: entity.email,
-      role: entity.role,
+      roleId: entity.roleId,
       tokenHash: entity.tokenHash,
       status: entity.status,
       expiresAt: new Date(entity.expiresAt),
@@ -27,7 +27,7 @@ export class SchoolInvitationMapper {
     }
     entity.schoolId = primitives.schoolId;
     entity.email = primitives.email;
-    entity.role = primitives.role;
+    entity.roleId = primitives.roleId;
     entity.tokenHash = primitives.tokenHash;
     entity.status = primitives.status;
     entity.expiresAt = primitives.expiresAt.getTime();

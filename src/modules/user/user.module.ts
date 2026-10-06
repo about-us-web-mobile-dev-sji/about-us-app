@@ -29,13 +29,13 @@ import {
 } from './application/gateway/user-status-events.gateway.js';
 import { NestUserStatusEventsGateway } from './infrastructure/events/nest-user-status-events.gateway.js';
 import { UpdateUserStatus } from './application/use-cases/commands/update-user-status/update-user-status.js';
-import { MembershipEntity } from '../school/infrastructure/persistence/typeorm/membership.entity.js';
+import { SchoolMembershipEntity } from '../school/infrastructure/persistence/typeorm/school-membership.entity.js';
 
 @Module({
   imports: [
     ConfigModule,
     DatabaseModule,
-    TypeOrmModule.forFeature([UserEntity, MembershipEntity]),
+    TypeOrmModule.forFeature([UserEntity, SchoolMembershipEntity]),
   ],
   controllers: [UserController],
   exports: [UserAccountService],

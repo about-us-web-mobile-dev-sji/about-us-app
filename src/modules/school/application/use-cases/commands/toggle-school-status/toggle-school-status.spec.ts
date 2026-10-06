@@ -8,9 +8,8 @@ import type { SpaceRepository } from '../../../../../spaces/domain/repositories/
 
 describe('ToggleSchoolStatus', () => {
   const props = {
-    id: '11111111-1111-4111-8111-111111111111',
+    id: '11111111-1111-4111-8111-111111111111' as const,
     name: 'École test',
-    address: null,
     phoneNumber: null,
     email: 'contact@ecole.test',
     website: null,
@@ -70,6 +69,21 @@ describe('ToggleSchoolStatus', () => {
 
     expect(school.status).toBe(SchoolStatus.ACTIVE);
     expect(stored().status).toBe(SchoolStatus.ACTIVE);
+  });
+
+  it('can explicitly block an already blocked school without enabling it', async () => {
+    const { repo, stored } = repository(
+      School.reconstitute({ ...props, status: SchoolStatus.BLOCKED }),
+    );
+    const useCase = new ToggleSchoolStatus(repo);
+
+    const { school } = await useCase.handle({
+      schoolId: props.id,
+      status: SchoolStatus.BLOCKED,
+    });
+
+    expect(school.status).toBe(SchoolStatus.BLOCKED);
+    expect(stored().status).toBe(SchoolStatus.BLOCKED);
   });
 
   it('throws when the school does not exist', async () => {

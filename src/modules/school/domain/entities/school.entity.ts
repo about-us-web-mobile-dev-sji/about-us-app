@@ -16,6 +16,13 @@ export interface SchoolProps {
 
 export type NewSchool = Omit<SchoolProps, 'id'>;
 
+export interface SchoolDetailsChanges {
+  name?: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  website?: string | null;
+}
+
 export class School {
   private constructor(private props: SchoolProps) {}
 
@@ -71,38 +78,48 @@ export class School {
     return this.props.status;
   }
 
-  update(changes: {
-    name?: string;
-    phoneNumber?: string | null;
-    email?: string | null;
-    website?: string | null;
-  }): void {
+  updateDetails(changes: SchoolDetailsChanges): void {
+    const name = changes.name?.trim();
     if (changes.name !== undefined) {
-      const name = changes.name.trim();
       if (!name) {
         throw new InvalidSchoolException('School name is required');
       }
-      this.props.name = name;
+      if (name.length > 200) {
+        throw new InvalidSchoolException('School name must not exceed 200 characters');
+      }
     }
-
+    const phoneNumber = changes.phoneNumber?.trim() || null;
     if (changes.phoneNumber !== undefined) {
-      this.props.phoneNumber = changes.phoneNumber?.trim() || null;
+      if (phoneNumber && phoneNumber.length > 50) {
+        throw new InvalidSchoolException('Phone number must not exceed 50 characters');
+      }
     }
-
+    const email = changes.email?.trim() || null;
     if (changes.email !== undefined) {
-      this.props.email = changes.email?.trim() || null;
+      if (email && email.length > 320) {
+        throw new InvalidSchoolException('Email must not exceed 320 characters');
+      }
     }
-
+    const website = changes.website?.trim() || null;
     if (changes.website !== undefined) {
-      this.props.website = changes.website?.trim() || null;
+      if (website && website.length > 500) {
+        throw new InvalidSchoolException('Website must not exceed 500 characters');
+      }
     }
 
+    if (name !== undefined) this.props.name = name;
+    if (changes.phoneNumber !== undefined) this.props.phoneNumber = phoneNumber;
+    if (changes.email !== undefined) this.props.email = email;
+    if (changes.website !== undefined) this.props.website = website;
     this.props.updatedAt = new Date();
   }
 
   updateStatus(newStatus: SchoolStatus): void {
     if (!Object.values(SchoolStatus).includes(newStatus)) {
           throw new InvalidSchoolException('Invalid school status');
+    }
+    if (this.props.status === newStatus) {
+      return;
     }
     this.props.status = newStatus;
     this.props.updatedAt = new Date();

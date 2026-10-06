@@ -3,34 +3,37 @@ import { UserEntity } from './../entity/user.entity.js';
 import { User } from '../../../domain/entities/user.entity.js';
 import { GlobalRole } from '../../../domain/enum/global-role.enum.js';
 import { Email } from '../../../domain/value-objects/email.js';
-import type {
-  PaginatedResult,
-  PaginationParams,
-  UserFilters,
-  UserRepository,
-} from '../../../domain/repositories/i-user.repository.js';
+import type { UserFilters, UserRepository } from '../../../domain/repositories/i-user.repository.js';
+import type { PaginatedResult, PaginationParams } from '../../../../../shared/domain/pagination.js';
 import { SuperAdminEmailConflictException } from '../../../domain/exceptions/super-admin-email-conflict.exception.js';
 import { UserEmailAlreadyUsedException } from '../../../domain/exceptions/user-email-already-used.exception.js';
 import { UserMapper } from './../mappers/user.mapper.js';
-import { MembershipEntity } from '../../../../school/infrastructure/persistence/typeorm/membership.entity.js';
+import { SchoolMembershipEntity } from '../../../../school/infrastructure/persistence/typeorm/school-membership.entity.js';
+
 export class TypeormUserRepository implements UserRepository {
+
   constructor(private readonly repo: Repository<UserEntity>) {}
+
   private read(row: UserEntity | null) {
     return row ? UserMapper.toDomain(row) : null;
   }
+
   async findById(id: string) {
     return this.read(await this.repo.findOneBy({ id }));
   }
+  
   async findByEmail(email: string) {
     return this.read(
       await this.repo.findOneBy({ email: Email.create(email).value }),
     );
   }
+  
   async findSuperAdmin() {
     return this.read(
       await this.repo.findOneBy({ globalRole: GlobalRole.SUPER_ADMIN }),
     );
   }
+  
   async superAdminExists() {
     return (await this.findSuperAdmin()) !== null;
   }
@@ -43,9 +46,9 @@ export class TypeormUserRepository implements UserRepository {
 
     if (filters.schoolId) {
       query.innerJoin(
-        MembershipEntity,
+        SchoolMembershipEntity,
         'membership',
-        'membership.user_id = user.id AND membership.school_id = :schoolId',
+        'CAST(membership.userId AS text) = user.id AND membership.schoolId = :schoolId',
         { schoolId: filters.schoolId },
       );
     }

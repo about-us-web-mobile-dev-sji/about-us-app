@@ -1,196 +1,217 @@
 import { describe, expect, it } from 'vitest';
-import { GlobalRole } from '../../../user/domain/enum/global-role.enum.js';
-import { SchoolMembership } from '../../domain/entities/school-membership.entity.js';
-import { MembershipRole } from '../../domain/enums/membership-role.enum.js';
+import {
+  ROLE,
+  SCHOOL_ID,
+  customRole,
+  defaultRoles,
+  membershipOf,
+  world,
+} from '../testing/school-test-helpers.js';
 import { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
 import { SchoolAction } from '../../domain/enums/school-action.enum.js';
-import { SchoolMembershipActionForbiddenException } from '../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolStatus } from '../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../domain/exceptions/invalid-school.exception.js';
+import { SchoolMembershipActionForbiddenException } from '../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolNotFoundException } from '../../domain/exceptions/school-not-found.exception.js';
-import type { SchoolRepository } from '../../domain/repositories/i-school.repository.js';
-import type { SchoolMembershipRepository } from '../../domain/repositories/i-school-membership.repository.js';
-import { SchoolAuthorizationService } from './school-authorization.service.js';
+
+const grader = customRole('role-grader', 'Surveillant', [
+  SchoolAction.SUSPEND_MEMBER,
+  SchoolAction.INVITE_MEMBER,
+]);
+const roles = () => [...defaultRoles(), grader];
 
 describe('SchoolAuthorizationService', () => {
-  const schoolId = '11111111-1111-4111-8111-111111111111';
-  const otherSchoolId = '99999999-9999-4999-8999-999999999999';
-  const userId = 'user-1';
-
-  const membership = (
-    role: MembershipRole,
-    status: MembershipStatus,
-    sId = schoolId,
-    grantedPermissions: SchoolAction[] = [],
-  ) =>
-    SchoolMembership.reconstitute({
-      id: 'm-1',
-      schoolId: sId,
-      userId,
-      role,
-      status,
-      grantedBy: 'super',
-      grantedAt: new Date(),
-      revokedAt: null,
-      revokedBy: null,
-      grantedPermissions,
+  describe('assertCan', () => {
+    it('lets the administrator do everything', async () => {
+      const { authorization } = world([membershipOf('admin', [ROLE.admin])]);
+      for (const action of Object.values(SchoolAction)) {
+        await expect(authorization.assertCan({ userId: 'admin' }, action, SCHOOL_ID)).resolves.toBeUndefined();
+      }
     });
 
-  const serviceWith = (memberships: SchoolMembership[]) =>
-    new SchoolAuthorizationService({
-      findBySchoolAndUser: async (sId: string, uId: string) =>
-        memberships.find((m) => m.schoolId === sId && m.userId === uId) ?? null,
-    } as unknown as SchoolMembershipRepository, {
-      findById: async () => null,
-    } as unknown as SchoolRepository);
-
-  const user = { userId, globalRole: GlobalRole.USER };
-
-  it('always lets a super admin through, even without membership', async () => {
-    const service = serviceWith([]);
-    for (const action of Object.values(SchoolAction)) {
+    it('gives a member only what its role carries', async () => {
+      const { authorization } = world([membershipOf('staff', [ROLE.staff])]);
       await expect(
-        service.assertCan({ userId: 'root', globalRole: GlobalRole.SUPER_ADMIN }, action, schoolId),
+        authorization.assertCan({ userId: 'staff' }, SchoolAction.VIEW_MEMBERS, SCHOOL_ID),
       ).resolves.toBeUndefined();
-    }
-  });
+      await expect(
+        authorization.assertCan({ userId: 'staff' }, SchoolAction.SUSPEND_MEMBER, SCHOOL_ID),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    });
 
-  it('lets an active school admin perform admin actions', async () => {
-    const service = serviceWith([membership(MembershipRole.SCHOOL_ADMIN, MembershipStatus.ACTIVE)]);
-    for (const action of [
-      SchoolAction.INVITE_MEMBER,
-      SchoolAction.SUSPEND_MEMBER,
-      SchoolAction.CANCEL_SUSPENSION,
-      SchoolAction.REVOKE_MEMBER,
-      SchoolAction.CHANGE_MEMBER_ROLE,
-      SchoolAction.VIEW_MEMBERS,
-      SchoolAction.VIEW_MEMBER_DETAILS,
-      SchoolAction.UPDATE_SCHOOL,
-      SchoolAction.MANAGE_MEMBER_PERMISSIONS,
-    ]) {
-      await expect(service.assertCan(user, action, schoolId)).resolves.toBeUndefined();
-    }
-  });
+    it('gives a student nothing', async () => {
+      const { authorization } = world([membershipOf('student', [ROLE.student])]);
+      expect(await authorization.getPermissionsFor({ userId: 'student' }, SCHOOL_ID)).toEqual([]);
+    });
 
-  it('reserves INVITE_ADMIN to the super admin, even for an active school admin', async () => {
-    const service = serviceWith([membership(MembershipRole.SCHOOL_ADMIN, MembershipStatus.ACTIVE)]);
-    await expect(service.assertCan(user, SchoolAction.INVITE_ADMIN, schoolId)).rejects.toBeInstanceOf(
-      SchoolMembershipActionForbiddenException,
-    );
-  });
-
-  it.each([MembershipStatus.SUSPENDED, MembershipStatus.INACTIVE, MembershipStatus.REVOKED])(
-    'refuses a school admin whose membership is %s',
-    async (status) => {
-      const service = serviceWith([membership(MembershipRole.SCHOOL_ADMIN, status)]);
-      await expect(service.assertCan(user, SchoolAction.SUSPEND_MEMBER, schoolId)).rejects.toBeInstanceOf(
-        SchoolMembershipActionForbiddenException,
+    it('unites the permissions of several roles', async () => {
+      const { authorization } = world([membershipOf('multi', [ROLE.staff, 'role-grader'])], {
+        roles: roles(),
+      });
+      const actions = await authorization.getPermissionsFor({ userId: 'multi' }, SCHOOL_ID);
+      expect(actions.sort()).toEqual(
+        [SchoolAction.VIEW_MEMBERS, SchoolAction.SUSPEND_MEMBER, SchoolAction.INVITE_MEMBER].sort(),
       );
-    },
-  );
-
-  it('gives a simple member nothing by default', async () => {
-    const service = serviceWith([membership(MembershipRole.SCHOOL_MEMBER, MembershipStatus.ACTIVE)]);
-    for (const action of Object.values(SchoolAction)) {
-      await expect(service.assertCan(user, action, schoolId)).rejects.toBeInstanceOf(
-        SchoolMembershipActionForbiddenException,
-      );
-    }
-    expect(await service.getPermissionsFor(user, schoolId)).toEqual([]);
-  });
-
-  describe('delegated permissions', () => {
-    const delegate = (status = MembershipStatus.ACTIVE) =>
-      serviceWith([
-        membership(MembershipRole.SCHOOL_MEMBER, status, schoolId, [
-          SchoolAction.VIEW_MEMBERS,
-          SchoolAction.SUSPEND_MEMBER,
-        ]),
-      ]);
-
-    it('lets an ACTIVE delegate use exactly what was granted', async () => {
-      const service = delegate();
-      await expect(service.assertCan(user, SchoolAction.SUSPEND_MEMBER, schoolId)).resolves.toBeUndefined();
-      await expect(service.assertCan(user, SchoolAction.REVOKE_MEMBER, schoolId)).rejects.toBeInstanceOf(
-        SchoolMembershipActionForbiddenException,
-      );
-      expect(await service.getPermissionsFor(user, schoolId)).toEqual([
-        SchoolAction.VIEW_MEMBERS,
-        SchoolAction.SUSPEND_MEMBER,
-      ]);
     });
 
     it.each([MembershipStatus.SUSPENDED, MembershipStatus.INACTIVE, MembershipStatus.REVOKED])(
-      'ignores granted permissions when the membership is %s',
+      'gives nothing to a %s membership, even an administrator',
       async (status) => {
-        const service = delegate(status);
-        await expect(service.assertCan(user, SchoolAction.SUSPEND_MEMBER, schoolId)).rejects.toBeInstanceOf(
-          SchoolMembershipActionForbiddenException,
-        );
-        expect(await service.getPermissionsFor(user, schoolId)).toEqual([]);
+        const { authorization } = world([membershipOf('admin', [ROLE.admin], status)]);
+        await expect(
+          authorization.assertCan({ userId: 'admin' }, SchoolAction.VIEW_MEMBERS, SCHOOL_ID),
+        ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
       },
     );
 
-    it('unites role permissions and granted ones without duplicates for an admin', async () => {
-      const service = serviceWith([
-        membership(MembershipRole.SCHOOL_ADMIN, MembershipStatus.ACTIVE, schoolId, [SchoolAction.VIEW_MEMBERS]),
-      ]);
-      const actions = await service.getPermissionsFor(user, schoolId);
-      expect(actions.filter((a) => a === SchoolAction.VIEW_MEMBERS)).toHaveLength(1);
-      expect(actions).toContain(SchoolAction.MANAGE_MEMBER_PERMISSIONS);
-      expect(actions).not.toContain(SchoolAction.INVITE_ADMIN);
+    it('refuses someone who is not a member', async () => {
+      const { authorization } = world([]);
+      await expect(
+        authorization.assertCan({ userId: 'ghost' }, SchoolAction.VIEW_MEMBERS, SCHOOL_ID),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
     });
 
-    it('gives a super admin every action, and a stranger none', async () => {
-      const service = serviceWith([]);
-      expect(
-        await service.getPermissionsFor({ userId: 'root', globalRole: GlobalRole.SUPER_ADMIN }, schoolId),
-      ).toEqual(Object.values(SchoolAction));
-      expect(await service.getPermissionsFor(user, schoolId)).toEqual([]);
+    it('ignores roles that belong to another school', async () => {
+      const foreign = customRole('role-foreign', 'Étranger', [SchoolAction.REVOKE_MEMBER], 'other-school');
+      const { authorization } = world([membershipOf('u', ['role-foreign'])], {
+        roles: [...defaultRoles(), foreign],
+      });
+      expect(await authorization.getPermissionsFor({ userId: 'u' }, SCHOOL_ID)).toEqual([]);
     });
   });
 
-  it('refuses a non-member, and an admin of another school', async () => {
-    const service = serviceWith([
-      membership(MembershipRole.SCHOOL_ADMIN, MembershipStatus.ACTIVE, otherSchoolId),
-    ]);
-    await expect(service.assertCan(user, SchoolAction.VIEW_MEMBERS, schoolId)).rejects.toBeInstanceOf(
-      SchoolMembershipActionForbiddenException,
-    );
-    await expect(
-      serviceWith([]).assertCan(user, SchoolAction.INVITE_MEMBER, schoolId),
-    ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+  describe('content manager', () => {
+    it('holds the document permissions and nothing of the administration', async () => {
+      const { authorization } = world([membershipOf('content', [ROLE.contentManager])]);
+      const actions = await authorization.getPermissionsFor({ userId: 'content' }, SCHOOL_ID);
+      expect(actions).toEqual(
+        expect.arrayContaining([
+          SchoolAction.MANAGE_DOCUMENTS,
+          SchoolAction.SHARE_DOCUMENTS,
+          SchoolAction.VIEW_METRICS,
+        ]),
+      );
+      await expect(
+        authorization.assertCan({ userId: 'content' }, SchoolAction.ASSIGN_ROLES, SCHOOL_ID),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    });
+
+    it('is not protected like a peer who can suspend or revoke, and cannot hand out admin powers', async () => {
+      const w = world([membershipOf('mgr', ['role-grader']), membershipOf('content', [ROLE.contentManager])], {
+        roles: [...defaultRoles(), grader],
+      });
+      await expect(
+        w.authorization.assertCanManageTarget({ userId: 'mgr' }, SCHOOL_ID, w.memberships.get('content')),
+      ).resolves.toBeUndefined();
+      await expect(
+        w.authorization.assertCanGrantPermissions({ userId: 'content' }, SCHOOL_ID, [SchoolAction.SUSPEND_MEMBER]),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    });
+  });
+
+  describe('assertCanAny', () => {
+    it('passes when one of the actions is held', async () => {
+      const { authorization } = world([membershipOf('g', ['role-grader'])], { roles: roles() });
+      await expect(
+        authorization.assertCanAny(
+          { userId: 'g' },
+          [SchoolAction.MANAGE_ROLES, SchoolAction.INVITE_MEMBER],
+          SCHOOL_ID,
+        ),
+      ).resolves.toBeUndefined();
+    });
   });
 
   describe('assertSchoolWritable', () => {
-    const withSchool = (found: 'active' | 'blocked' | 'none') =>
-      new SchoolAuthorizationService({} as SchoolMembershipRepository, {
-        findById: async () =>
-          found === 'none'
-            ? null
-            : { status: found === 'blocked' ? SchoolStatus.BLOCKED : SchoolStatus.ACTIVE },
-      } as unknown as SchoolRepository);
-
-    it('accepts an active school', async () => {
-      await expect(withSchool('active').assertSchoolWritable(user, schoolId)).resolves.toBeUndefined();
+    it('returns the school when it is open', async () => {
+      const { authorization } = world([]);
+      await expect(authorization.assertSchoolWritable(SCHOOL_ID)).resolves.toMatchObject({
+        name: 'École test',
+      });
     });
 
-    it('refuses a BLOCKED school for a non super admin', async () => {
-      await expect(withSchool('blocked').assertSchoolWritable(user, schoolId)).rejects.toBeInstanceOf(
+    it('refuses a BLOCKED school for everybody', async () => {
+      const { authorization } = world([], { schoolStatus: SchoolStatus.BLOCKED });
+      await expect(authorization.assertSchoolWritable(SCHOOL_ID)).rejects.toBeInstanceOf(
         InvalidSchoolException,
       );
     });
 
-    it('lets a super admin write on a BLOCKED school', async () => {
+    it('refuses an unknown school', async () => {
+      const { authorization, memberships, roles: r } = world([]);
+      const unknown = new (authorization.constructor as new (...a: unknown[]) => typeof authorization)(
+        memberships.repo,
+        r.repo,
+        { findById: async () => null },
+      );
+      await expect(unknown.assertSchoolWritable(SCHOOL_ID)).rejects.toBeInstanceOf(
+        SchoolNotFoundException,
+      );
+    });
+  });
+
+  describe('assertCanManageTarget', () => {
+    const members = () => [
+      membershipOf('admin', [ROLE.admin]),
+      membershipOf('grader', ['role-grader']),
+      membershipOf('grader2', ['role-grader']),
+      membershipOf('student', [ROLE.student]),
+    ];
+
+    it('lets the administrator act on anyone', async () => {
+      const w = world(members(), { roles: roles() });
       await expect(
-        withSchool('blocked').assertSchoolWritable({ userId: 'root', globalRole: GlobalRole.SUPER_ADMIN }, schoolId),
+        w.authorization.assertCanManageTarget({ userId: 'admin' }, SCHOOL_ID, w.memberships.get('grader')),
       ).resolves.toBeUndefined();
     });
 
-    it('throws when the school does not exist', async () => {
-      await expect(withSchool('none').assertSchoolWritable(user, schoolId)).rejects.toBeInstanceOf(
-        SchoolNotFoundException,
-      );
+    it('lets a delegate act on an ordinary member', async () => {
+      const w = world(members(), { roles: roles() });
+      await expect(
+        w.authorization.assertCanManageTarget({ userId: 'grader' }, SCHOOL_ID, w.memberships.get('student')),
+      ).resolves.toBeUndefined();
+    });
+
+    it.each([
+      ['themselves', 'grader'],
+      ['the administrator', 'admin'],
+      ['a peer who can suspend', 'grader2'],
+    ])('refuses a delegate acting on %s', async (_label, target) => {
+      const w = world(members(), { roles: roles() });
+      await expect(
+        w.authorization.assertCanManageTarget({ userId: 'grader' }, SCHOOL_ID, w.memberships.get(target)),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    });
+  });
+
+  describe('assertCanGrantPermissions', () => {
+    it('lets the administrator grant anything, MANAGE_ROLES included', async () => {
+      const w = world([membershipOf('admin', [ROLE.admin])]);
+      await expect(
+        w.authorization.assertCanGrantPermissions({ userId: 'admin' }, SCHOOL_ID, Object.values(SchoolAction)),
+      ).resolves.toBeUndefined();
+    });
+
+    it('lets a delegate grant what it holds', async () => {
+      const w = world([membershipOf('g', ['role-grader'])], { roles: roles() });
+      await expect(
+        w.authorization.assertCanGrantPermissions({ userId: 'g' }, SCHOOL_ID, [SchoolAction.INVITE_MEMBER]),
+      ).resolves.toBeUndefined();
+    });
+
+    it('refuses to grant a permission the delegate does not hold', async () => {
+      const w = world([membershipOf('g', ['role-grader'])], { roles: roles() });
+      await expect(
+        w.authorization.assertCanGrantPermissions({ userId: 'g' }, SCHOOL_ID, [SchoolAction.REVOKE_MEMBER]),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    });
+
+    it('reserves MANAGE_ROLES to the administrator', async () => {
+      const manager = customRole('role-mgr', 'Gestionnaire', [SchoolAction.MANAGE_ROLES]);
+      const w = world([membershipOf('m', ['role-mgr'])], { roles: [...defaultRoles(), manager] });
+      await expect(
+        w.authorization.assertCanGrantPermissions({ userId: 'm' }, SCHOOL_ID, [SchoolAction.MANAGE_ROLES]),
+      ).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
     });
   });
 });
