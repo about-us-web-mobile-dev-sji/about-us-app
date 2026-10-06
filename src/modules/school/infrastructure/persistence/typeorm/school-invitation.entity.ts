@@ -1,6 +1,5 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { InvitationStatus } from '../../../domain/enums/invitation-status.enum.js';
-import { MembershipRole } from '../../../domain/enums/membership-role.enum.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
 
 @Entity({ schema: 'school', name: 'school_invitations' })
@@ -15,12 +14,8 @@ export class SchoolInvitationEntity {
   @Column({ type: 'varchar', length: 320 })
   email!: string;
 
-  @Column({
-    type: 'enum',
-    enum: MembershipRole,
-    default: MembershipRole.SCHOOL_ADMIN,
-  })
-  role!: MembershipRole;
+  @Column({ type: 'uuid', name: 'role_id' })
+  roleId!: string;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 64, name: 'token_hash' })

@@ -1,8 +1,7 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InvitationAcceptedEvent } from '../../../../infrastructure/events/invitation-accepted.event.js';
+import { InvitationAcceptedEvent } from '../../../events/invitation-accepted.event.js';
 import { SchoolInvitation } from '../../../../domain/entities/school-invitation.entity.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
@@ -13,6 +12,8 @@ import { SchoolMembershipActionForbiddenException } from '../../../../domain/exc
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
+import type { SchoolRoleRepository } from '../../../../domain/repositories/i-school-role.repository.js';
+import { SchoolRoleNotFoundException } from '../../../../domain/exceptions/school-role-not-found.exception.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 import type { AcceptSchoolInvitationInput } from './accept-school-invitation.input.js';
@@ -25,6 +26,7 @@ export class AcceptSchoolInvitation {
     private readonly schools: SchoolRepository,
     private readonly invitations: SchoolInvitationRepository,
     private readonly memberships: SchoolMembershipRepository,
+    private readonly roles: SchoolRoleRepository,
     private readonly users: UserAccountService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -67,44 +69,47 @@ export class AcceptSchoolInvitation {
       throw new SchoolInvitationMismatchException();
     }
 
-    const schoolMemberships = await this.memberships.findBySchool(
-      input.schoolId,
-    );
-    if (invitation.role === MembershipRole.SCHOOL_ADMIN) {
-      const otherAdmin = schoolMemberships.find(
+    const invitedRole = await this.roles.findById(invitation.roleId);
+    if (!invitedRole || invitedRole.schoolId !== input.schoolId) {
+      throw new SchoolRoleNotFoundException(invitation.roleId);
+    }
+
+    if (invitedRole.isAdmin) {
+      const holders = await this.memberships.findByRole(invitedRole.id);
+      const otherAdmin = holders.find(
         (m) =>
-          m.role === MembershipRole.SCHOOL_ADMIN &&
-          m.status !== MembershipStatus.REVOKED &&
-          m.userId !== input.userId,
+          m.status !== MembershipStatus.REVOKED && m.userId !== input.userId,
       );
       if (otherAdmin) {
         throw new SchoolAdministratorAlreadyAssignedException();
       }
     }
 
-    let membership = schoolMemberships.find((m) => m.userId === input.userId);
+    let membership = await this.memberships.findBySchoolAndUser(
+      input.schoolId,
+      input.userId,
+    );
     if (membership) {
       if (membership.status === MembershipStatus.REVOKED) {
         throw new SchoolMembershipActionForbiddenException(
           'Your membership to this school has been revoked',
         );
       }
-      if (invitation.role === MembershipRole.SCHOOL_ADMIN) {
-        membership.changeRole(MembershipRole.SCHOOL_ADMIN);
-        membership.activate();
-      } else {
-        if (membership.status === MembershipStatus.SUSPENDED) {
-          throw new SchoolMembershipActionForbiddenException(
-            'Your membership to this school is suspended',
-          );
-        }
-        membership.activate();
+      if (
+        !invitedRole.isAdmin &&
+        membership.status === MembershipStatus.SUSPENDED
+      ) {
+        throw new SchoolMembershipActionForbiddenException(
+          'Your membership to this school is suspended',
+        );
       }
+      membership.activate();
+      membership.assignRole(invitedRole.id);
     } else {
       membership = SchoolMembership.create({
         schoolId: input.schoolId,
         userId: input.userId,
-        role: invitation.role,
+        roleIds: [invitedRole.id],
         grantedBy: invitation.invitedBy,
       });
     }

@@ -4,8 +4,8 @@ import { createHash } from 'node:crypto';
 import { SendNotification } from '../../application/use-cases/commands/send-notification/send-notification.js';
 import { NotificationType } from '../../domain/enums/notification-type.enum.js';
 import { UserAccountService } from '../../../user/application/user-account.service.js';
-import type { InvitationSentEvent } from '../../../school/infrastructure/events/invitation-sent.event.js';
-import type { InvitationAcceptedEvent } from '../../../school/infrastructure/events/invitation-accepted.event.js';
+import type { InvitationSentEvent } from '../../../school/application/events/invitation-sent.event.js';
+import type { InvitationAcceptedEvent } from '../../../school/application/events/invitation-accepted.event.js';
 import type { SuperAdminCreatedEvent } from '../../../user/domain/events/super-admin-created.event.js';
 import type { UserStatusUpdatedEvent } from '../../../user/domain/events/user-status-updated.event.js';
 

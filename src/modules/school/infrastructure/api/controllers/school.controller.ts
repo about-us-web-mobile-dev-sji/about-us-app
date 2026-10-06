@@ -11,6 +11,7 @@ import { SchoolResponse } from '../dto/responses/school.response.js';
 
 @Controller('schools')
 @UseGuards(AuthGuard, RolesGuard)
+@Roles(GlobalRole.SUPER_ADMIN)
 export class SchoolController {
   constructor(
     private readonly createSchool: CreateSchoolUseCase,
@@ -34,7 +35,6 @@ export class SchoolController {
   }
 
   @Post()
-  @Roles(GlobalRole.SUPER_ADMIN)
   async create(@Body() dto: CreateSchoolDto, @Req() req: AuthenticatedRequest) {
     const userId = req.auth.subjectId;
 

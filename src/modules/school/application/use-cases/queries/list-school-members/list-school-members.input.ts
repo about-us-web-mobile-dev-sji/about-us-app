@@ -1,9 +1,11 @@
-import type { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 import type { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
+import type { PaginationParams } from '../../../../../../shared/domain/pagination.js';
 
 export interface ListSchoolMembersInput {
   schoolId: string;
   performedBy: string;
-  performedByGlobalRole: GlobalRole;
   status?: MembershipStatus;
+  roleId?: string;
+  search?: string;
+  pagination?: PaginationParams;
 }

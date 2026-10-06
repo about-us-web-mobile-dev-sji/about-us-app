@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
@@ -19,7 +18,6 @@ describe('ListSchoolsUseCase', () => {
     School.reconstitute({
       id: id as never,
       name: `School ${id.slice(0, 2)}`,
-      address: null,
       phoneNumber: null,
       email: null,
       website: null,
@@ -33,7 +31,7 @@ describe('ListSchoolsUseCase', () => {
       id: `m-${schoolId}`,
       schoolId,
       userId: 'user-1',
-      role: MembershipRole.SCHOOL_MEMBER,
+      roleIds: ['role-student'],
       status,
       grantedBy: 'root',
       grantedAt: new Date(),

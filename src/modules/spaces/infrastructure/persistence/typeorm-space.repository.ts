@@ -2,12 +2,8 @@ import { Repository, QueryRunner, In, LessThan } from 'typeorm';
 import { SpaceEntity } from './typeorm/space.entity.js';
 import { Space } from '../../domain/entities/space.js';
 import { SpaceKind } from '../../domain/enums/space-kind.js';
-import type {
-  SpaceRepository,
-  SpaceFilters,
-  PaginationParams,
-  PaginatedResult,
-} from '../../domain/repositories/i-space.repository.js';
+import type { SpaceRepository, SpaceFilters } from '../../domain/repositories/i-space.repository.js';
+import type { PaginationParams, PaginatedResult } from '../../../../shared/domain/pagination.js';
 import { SpaceMapper } from './mappers/space.mapper.js';
 import { SpaceNotFoundException } from '../../domain/exceptions/space.exceptions.js';
 import type { UUID } from 'node:crypto';

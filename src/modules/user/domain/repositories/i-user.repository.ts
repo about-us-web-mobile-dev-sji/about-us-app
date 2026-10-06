@@ -1,6 +1,7 @@
 import { User } from '../entities/user.entity.js';
 import UserStatus from '../enum/user-status.enum.js';
 import type { UUID } from 'node:crypto';
+import type { PaginatedResult, PaginationParams } from '../../../../shared/domain/pagination.js';
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 
@@ -22,17 +23,4 @@ export interface UserFilters {
   status?: UserStatus;
   search?: string;
   schoolId?: UUID;
-}
-
-export interface PaginationParams {
-  page: number;   
-  limit: number;
-}
-
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;      
-  page: number;
-  limit: number;
-  totalPages: number;
 }

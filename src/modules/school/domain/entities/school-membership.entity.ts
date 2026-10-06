@@ -1,26 +1,17 @@
-import { MembershipRole } from '../enums/membership-role.enum.js';
 import { MembershipStatus } from '../enums/membership-status.enum.js';
-import { SchoolAction } from '../enums/school-action.enum.js';
 import { InvalidSchoolMembershipException } from '../exceptions/invalid-school-membership.exception.js';
-import { isGrantableAction } from '../policies/school-role-permissions.js';
 
 export interface SchoolMembershipProps {
   id: string;
   schoolId: string;
   userId: string;
-  role: MembershipRole;
   status: MembershipStatus;
   grantedBy: string | null;
   grantedAt: Date;
   revokedAt: Date | null;
   revokedBy: string | null;
-  grantedPermissions: SchoolAction[];
+  roleIds: string[];
 }
-
-// Rows written before delegation existed carry no grantedPermissions.
-export type SchoolMembershipSnapshot = Omit<SchoolMembershipProps, 'grantedPermissions'> & {
-  grantedPermissions?: readonly SchoolAction[];
-};
 
 export class SchoolMembership {
   private constructor(private props: SchoolMembershipProps) {}
@@ -28,7 +19,7 @@ export class SchoolMembership {
   static create(input: {
     schoolId: string;
     userId: string;
-    role: MembershipRole;
+    roleIds: readonly string[];
     grantedBy: string;
   }): SchoolMembership {
     const now = new Date();
@@ -43,27 +34,26 @@ export class SchoolMembership {
           throw new InvalidSchoolMembershipException('GrantedBy is required');
     }
 
+    const roleIds = [...new Set(input.roleIds.filter((id) => id?.trim()).map((id) => id.trim()))];
+    if (roleIds.length === 0) {
+      throw new InvalidSchoolMembershipException('At least one role is required');
+    }
+
     return new SchoolMembership({
       id: '',
       schoolId: input.schoolId.trim(),
       userId: input.userId.trim(),
-      role: input.role,
       status: MembershipStatus.ACTIVE,
       grantedBy: input.grantedBy.trim(),
       grantedAt: now,
       revokedAt: null,
       revokedBy: null,
-      grantedPermissions: [],
+      roleIds,
     });
   }
 
-  static reconstitute(props: SchoolMembershipSnapshot): SchoolMembership {
-    return new SchoolMembership(
-      structuredClone({
-        ...props,
-        grantedPermissions: [...(props.grantedPermissions ?? [])],
-      }),
-    );
+  static reconstitute(props: SchoolMembershipProps): SchoolMembership {
+    return new SchoolMembership(structuredClone(props));
   }
 
   get id(): string {
@@ -76,10 +66,6 @@ export class SchoolMembership {
 
   get userId(): string {
     return this.props.userId;
-  }
-
-  get role(): MembershipRole {
-    return this.props.role;
   }
 
   get status(): MembershipStatus {
@@ -102,8 +88,43 @@ export class SchoolMembership {
     return this.props.revokedBy;
   }
 
-  get grantedPermissions(): readonly SchoolAction[] {
-    return [...this.props.grantedPermissions];
+  get roleIds(): readonly string[] {
+    return [...this.props.roleIds];
+  }
+
+  hasRole(roleId: string): boolean {
+    return this.props.roleIds.includes(roleId);
+  }
+
+  assignRole(roleId: string): boolean {
+    this.assertRolesEditable();
+    if (!roleId?.trim()) {
+      throw new InvalidSchoolMembershipException('Role ID is required');
+    }
+    if (this.hasRole(roleId)) {
+      return false;
+    }
+    this.props.roleIds.push(roleId.trim());
+    return true;
+  }
+
+  removeRole(roleId: string): boolean {
+    this.assertRolesEditable();
+    const index = this.props.roleIds.indexOf(roleId);
+    if (index === -1) {
+      return false;
+    }
+    if (this.props.roleIds.length === 1) {
+      throw new InvalidSchoolMembershipException('A membership must keep at least one role');
+    }
+    this.props.roleIds.splice(index, 1);
+    return true;
+  }
+
+  private assertRolesEditable(): void {
+    if (this.props.status !== MembershipStatus.ACTIVE) {
+      throw new InvalidSchoolMembershipException('Roles can only be managed on an active membership');
+    }
   }
 
   revoke(revokedBy: string): void {
@@ -144,51 +165,6 @@ export class SchoolMembership {
           throw new InvalidSchoolMembershipException('Cannot activate a revoked membership');
     }
     this.props.status = MembershipStatus.ACTIVE;
-  }
-
-  changeRole(newRole: MembershipRole): void {
-    if (this.props.status === MembershipStatus.REVOKED) {
-      throw new InvalidSchoolMembershipException('Cannot change the role of a revoked membership');
-    }
-    if (this.props.role === newRole) {
-      throw new InvalidSchoolMembershipException('Membership already has this role');
-    }
-    this.props.role = newRole;
-    // Delegated rights belong to the previous role: start clean.
-    this.props.grantedPermissions = [];
-  }
-
-  // Returns false when the permission was already held (idempotent).
-  grantPermission(action: SchoolAction): boolean {
-    this.assertPermissionsEditable(action);
-    if (this.props.grantedPermissions.includes(action)) {
-      return false;
-    }
-    this.props.grantedPermissions.push(action);
-    return true;
-  }
-
-  // Returns false when the permission was not held (idempotent).
-  revokePermission(action: SchoolAction): boolean {
-    this.assertPermissionsEditable(action);
-    const index = this.props.grantedPermissions.indexOf(action);
-    if (index === -1) {
-      return false;
-    }
-    this.props.grantedPermissions.splice(index, 1);
-    return true;
-  }
-
-  private assertPermissionsEditable(action: SchoolAction): void {
-    if (!isGrantableAction(action)) {
-      throw new InvalidSchoolMembershipException(`Action ${String(action)} cannot be delegated`);
-    }
-    if (this.props.status !== MembershipStatus.ACTIVE) {
-      throw new InvalidSchoolMembershipException('Permissions can only be managed on an active membership');
-    }
-    if (this.props.role === MembershipRole.SCHOOL_ADMIN) {
-      throw new InvalidSchoolMembershipException('A school administrator already holds every school permission');
-    }
   }
 
   toPrimitives(): SchoolMembershipProps {

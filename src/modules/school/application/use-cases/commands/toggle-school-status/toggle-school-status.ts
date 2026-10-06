@@ -15,7 +15,9 @@ export class ToggleSchoolStatus {
       throw new SchoolNotFoundException(input.schoolId);
     }
 
-    if (school.status === SchoolStatus.BLOCKED) {
+    if (input.status !== undefined) {
+      school.updateStatus(input.status);
+    } else if (school.status === SchoolStatus.BLOCKED) {
       school.unblock();
     } else {
       school.block();

@@ -1,14 +1,14 @@
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
+import type { SchoolRoleRepository } from '../../../../domain/repositories/i-school-role.repository.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
-import { toSchoolMembershipOutput } from '../../school.output.js';
+import { toSchoolMembershipOutput, toSchoolRoleSummary } from '../../school.output.js';
 import type { ListSchoolMembersInput } from './list-school-members.input.js';
 import type { ListSchoolMembersOutput } from './list-school-members.output.js';
 import type { UUID } from 'node:crypto';
@@ -17,6 +17,7 @@ export class ListSchoolMembersUseCase {
   constructor(
     private readonly schools: SchoolRepository,
     private readonly memberships: SchoolMembershipRepository,
+    private readonly roles: SchoolRoleRepository,
     private readonly authorization: SchoolAuthorizationService,
     private readonly users: UserAccountService,
   ) {}
@@ -30,7 +31,7 @@ export class ListSchoolMembersUseCase {
     }
 
     const actions = await this.authorization.getPermissionsFor(
-      { userId: input.performedBy, globalRole: input.performedByGlobalRole },
+      { userId: input.performedBy },
       input.schoolId,
     );
     const full = actions.includes(SchoolAction.VIEW_MEMBER_DETAILS);
@@ -43,15 +44,41 @@ export class ListSchoolMembersUseCase {
       throw new SchoolNotFoundException(input.schoolId);
     }
 
-    const all = await this.memberships.findBySchool(input.schoolId);
-    const rank = (role: MembershipRole) =>
-      role === MembershipRole.SCHOOL_ADMIN ? 0 : 1;
-    const sortAdminFirst = (list: typeof all) =>
-      list.sort(
-        (a, b) =>
-          rank(a.role) - rank(b.role) ||
-          a.grantedAt.getTime() - b.grantedAt.getTime(),
-      );
+    const page = input.pagination?.page ?? 1;
+    const limit = input.pagination?.limit ?? 20;
+    if (!Number.isInteger(page) || page < 1) {
+      throw new InvalidSchoolMembershipException('Page must be a positive integer');
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new InvalidSchoolMembershipException('Limit must be between 1 and 100');
+    }
+    if (input.roleId !== undefined && !input.roleId.trim()) {
+      throw new InvalidSchoolMembershipException('Role ID cannot be empty');
+    }
+    if (input.search !== undefined && input.search.trim().length > 200) {
+      throw new InvalidSchoolMembershipException('Search must not exceed 200 characters');
+    }
+
+    const statuses = full
+      ? input.status
+        ? [input.status]
+        : Object.values(MembershipStatus).filter((status) => status !== MembershipStatus.REVOKED)
+      : [MembershipStatus.ACTIVE];
+    const result = await this.memberships.findBySchoolPaginated(
+      input.schoolId,
+      {
+        statuses,
+        roleId: input.roleId?.trim(),
+        search: input.search?.trim() || undefined,
+        includeEmailInSearch: full,
+      },
+      { page, limit },
+    );
+    const schoolRoles = await this.roles.findBySchool(input.schoolId);
+    const rolesOf = (roleIds: readonly string[]) =>
+      schoolRoles
+        .filter((role) => roleIds.includes(role.id))
+        .map(toSchoolRoleSummary);
     const profileOf = async (userId: string) => {
       const profile = await this.users.authenticationProfile(userId);
       return {
@@ -63,37 +90,39 @@ export class ListSchoolMembersUseCase {
 
     if (!full) {
       // Reduced view: ACTIVE members only, whatever the requested status.
-      const active = sortAdminFirst(
-        all.filter((m) => m.status === MembershipStatus.ACTIVE),
-      );
       return {
         view: 'reduced',
-        members: await Promise.all(
-          active.map(async (m) => {
+        items: await Promise.all(
+          result.items.map(async (m) => {
             const { firstName, lastName } = await profileOf(m.userId);
-            return { userId: m.userId, firstName, lastName, role: m.role };
+            return {
+              userId: m.userId,
+              firstName,
+              lastName,
+              roles: rolesOf(m.roleIds),
+            };
           }),
         ),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
       };
     }
 
-    // Full view: every membership (administrator and caller included); only
-    // REVOKED ones are hidden, unless asked for.
-    const visible = sortAdminFirst(
-      all.filter((m) =>
-        input.status
-          ? m.status === input.status
-          : m.status !== MembershipStatus.REVOKED,
-      ),
-    );
     return {
       view: 'full',
-      members: await Promise.all(
-        visible.map(async (m) => ({
+      items: await Promise.all(
+        result.items.map(async (m) => ({
           ...toSchoolMembershipOutput(m),
+          roles: rolesOf(m.roleIds),
           ...(await profileOf(m.userId)),
         })),
       ),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
     };
   }
 }

@@ -24,12 +24,9 @@ export class SuspendSchoolMemberUseCase {
       throw new InvalidSchoolMembershipException('PerformedBy is required');
     }
 
-    const actor = {
-      userId: input.performedBy,
-      globalRole: input.performedByGlobalRole,
-    };
+    const actor = { userId: input.performedBy };
     await this.authorization.assertCan(actor, SchoolAction.SUSPEND_MEMBER, input.schoolId);
-    await this.authorization.assertSchoolWritable(actor, input.schoolId);
+    await this.authorization.assertSchoolWritable(input.schoolId);
 
     const targetMembership = await this.memberships.findBySchoolAndUser(
       input.schoolId,
@@ -38,7 +35,6 @@ export class SuspendSchoolMemberUseCase {
     await this.authorization.assertCanManageTarget(
       actor,
       input.schoolId,
-      input.memberUserId,
       targetMembership,
     );
 

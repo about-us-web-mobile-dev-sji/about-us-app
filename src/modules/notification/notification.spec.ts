@@ -23,6 +23,7 @@ import { InvalidNotificationException } from './domain/exceptions/invalid-notifi
 import { RecipientNotFoundException } from './domain/exceptions/recipient-not-found.exception.js';
 import { NotificationNotFoundException } from './domain/exceptions/notification-not-found.exception.js';
 import type { SendNotificationInput } from './application/use-cases/commands/send-notification/send-notification.input.js';
+import UserStatus from '../user/domain/enum/user-status.enum.js';
 
 export const makeSendNotificationInput = (
   overrides?: Partial<SendNotificationInput>,
@@ -456,7 +457,8 @@ describe('NotificationListener event handling', () => {
     await listener.security({
       eventId: randomUUID(),
       subjectId: randomUUID(),
-      status: 'SUSPENDED' as any,
+      previousStatus: UserStatus.ACTIVE,
+      status: UserStatus.SUSPENDED,
       occurredAt: new Date(),
     });
     expect(sendNotification.handle).toHaveBeenCalledWith(
@@ -495,6 +497,7 @@ describe('NotificationListener event handling', () => {
       schoolId: randomUUID(),
       schoolName: 'Oxford High',
       inviterId: randomUUID(),
+      adminUserId: randomUUID(),
       acceptedAt: new Date(),
     });
     expect(sendNotification.handle).toHaveBeenCalledWith(

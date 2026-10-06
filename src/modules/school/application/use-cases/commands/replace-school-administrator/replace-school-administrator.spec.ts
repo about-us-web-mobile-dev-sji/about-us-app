@@ -2,13 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { ReplaceSchoolAdministratorUseCase } from './replace-school-administrator.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
-import { MembershipRole } from '../../../../domain/enums/membership-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidReplacementException } from '../../../../domain/exceptions/invalid-replacement.exception.js';
 import { SchoolAdministratorNotFoundException } from '../../../../domain/exceptions/school-administrator-not-found.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
-import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
+import { ROLE, inMemoryMemberships, inMemoryRoles } from '../../../testing/school-test-helpers.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 
@@ -21,7 +20,6 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
   const school = School.reconstitute({
     id: schoolId,
     name: 'École test',
-    address: null,
     phoneNumber: null,
     email: null,
     website: null,
@@ -31,16 +29,18 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
     createdBy: performedBy,
   });
 
+  const ADMIN = 'ADMIN';
+  const MEMBER = 'MEMBER';
   const membership = (
     userId: string,
-    role: MembershipRole,
+    role: typeof ADMIN | typeof MEMBER,
     status = MembershipStatus.ACTIVE,
   ) =>
     SchoolMembership.reconstitute({
       id: `membership-${userId}`,
       schoolId,
       userId,
-      role,
+      roleIds: [role === ADMIN ? ROLE.admin : ROLE.student],
       status,
       grantedBy: performedBy,
       grantedAt: new Date(),
@@ -49,31 +49,12 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
     });
 
   const setup = (initial: SchoolMembership[], existingUsers = [newAdminId]) => {
-    let stored = [...initial];
-    let nextId = 1;
+    const store = inMemoryMemberships(initial);
     const schools = {
       findById: async (id: string) => (id === schoolId ? school : null),
     } as unknown as SchoolRepository;
-    const memberships: SchoolMembershipRepository = {
-      findById: async (id) => stored.find((m) => m.id === id) ?? null,
-      findBySchoolAndUser: async (s, u) =>
-        stored.find((m) => m.schoolId === s && m.userId === u) ?? null,
-      findActiveByUser: async () => [],
-      findActiveAdminBySchool: async () => null,
-      findBySchool: async (s) => stored.filter((m) => m.schoolId === s),
-      save: async (m) => {
-        const saved = m.id
-          ? m
-          : SchoolMembership.reconstitute({
-              ...m.toPrimitives(),
-              id: `created-${nextId++}`,
-            });
-        stored = stored.some((x) => x.id === saved.id)
-          ? stored.map((x) => (x.id === saved.id ? saved : x))
-          : [...stored, saved];
-        return saved;
-      },
-    };
+    const memberships = store.repo;
+    const roles = inMemoryRoles();
     const users = {
       exists: async (id: string) => existingUsers.includes(id),
     } as unknown as UserAccountService;
@@ -82,16 +63,17 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       useCase: new ReplaceSchoolAdministratorUseCase(
         schools,
         memberships,
+        roles.repo,
         users,
         roleChanged,
       ),
-      all: () => stored,
+      all: () => store.all(),
       roleChanged,
     };
   };
 
   it('revokes the previous admin membership and appoints a brand new admin', async () => {
-    const ctx = setup([membership(oldAdminId, MembershipRole.SCHOOL_ADMIN)]);
+    const ctx = setup([membership(oldAdminId, ADMIN)]);
 
     const out = await ctx.useCase.handle({
       schoolId,
@@ -109,7 +91,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
     expect(old.status).toBe(MembershipStatus.REVOKED);
     expect(old.revokedBy).toBe(performedBy);
     const created = ctx.all().find((m) => m.userId === newAdminId)!;
-    expect(created.role).toBe(MembershipRole.SCHOOL_ADMIN);
+    expect(created.roleIds).toContain(ROLE.admin);
     expect(created.status).toBe(MembershipStatus.ACTIVE);
   });
 
@@ -129,7 +111,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
 
   it('also replaces a suspended admin', async () => {
     const ctx = setup([
-      membership(oldAdminId, MembershipRole.SCHOOL_ADMIN, MembershipStatus.SUSPENDED),
+      membership(oldAdminId, ADMIN, MembershipStatus.SUSPENDED),
     ]);
 
     const out = await ctx.useCase.handle({
@@ -147,8 +129,8 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
   it('promotes an existing member, reactivating an inactive or suspended membership', async () => {
     for (const status of [MembershipStatus.INACTIVE, MembershipStatus.SUSPENDED]) {
       const ctx = setup([
-        membership(oldAdminId, MembershipRole.SCHOOL_ADMIN),
-        membership(newAdminId, MembershipRole.SCHOOL_MEMBER, status),
+        membership(oldAdminId, ADMIN),
+        membership(newAdminId, MEMBER, status),
       ]);
 
       const out = await ctx.useCase.handle({
@@ -158,7 +140,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       });
 
       const promoted = ctx.all().find((m) => m.userId === newAdminId)!;
-      expect(promoted.role).toBe(MembershipRole.SCHOOL_ADMIN);
+      expect(promoted.roleIds).toEqual([ROLE.student, ROLE.admin]);
       expect(promoted.status).toBe(MembershipStatus.ACTIVE);
       expect(out.newMembershipCreated).toBe(false);
     }
@@ -166,8 +148,8 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
 
   it('refuses a revoked member and leaves the current admin untouched', async () => {
     const ctx = setup([
-      membership(oldAdminId, MembershipRole.SCHOOL_ADMIN),
-      membership(newAdminId, MembershipRole.SCHOOL_MEMBER, MembershipStatus.REVOKED),
+      membership(oldAdminId, ADMIN),
+      membership(newAdminId, MEMBER, MembershipStatus.REVOKED),
     ]);
 
     await expect(
@@ -181,7 +163,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
   });
 
   it('refuses when the new admin already is the active administrator', async () => {
-    const ctx = setup([membership(newAdminId, MembershipRole.SCHOOL_ADMIN)]);
+    const ctx = setup([membership(newAdminId, ADMIN)]);
 
     await expect(
       ctx.useCase.handle({ schoolId, newAdminUserId: newAdminId, performedBy }),
@@ -189,7 +171,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
   });
 
   it('notifies both the previous and the new admin', async () => {
-    const ctx = setup([membership(oldAdminId, MembershipRole.SCHOOL_ADMIN)]);
+    const ctx = setup([membership(oldAdminId, ADMIN)]);
 
     await ctx.useCase.handle({ schoolId, newAdminUserId: newAdminId, performedBy });
 

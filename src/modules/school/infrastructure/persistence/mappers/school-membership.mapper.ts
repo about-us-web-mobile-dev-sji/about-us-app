@@ -1,5 +1,6 @@
 import { SchoolMembership } from '../../../domain/entities/school-membership.entity.js';
 import { SchoolMembershipEntity } from '../typeorm/school-membership.entity.js';
+import { SchoolRoleEntity } from '../typeorm/school-role.entity.js';
 
 export class SchoolMembershipMapper {
   static toDomain(entity: SchoolMembershipEntity): SchoolMembership {
@@ -7,13 +8,12 @@ export class SchoolMembershipMapper {
       id: entity.id,
       schoolId: entity.schoolId,
       userId: entity.userId,
-      role: entity.role,
       status: entity.status,
       grantedBy: entity.grantedBy,
       grantedAt: new Date(entity.grantedAt),
       revokedAt: entity.revokedAt ? new Date(entity.revokedAt) : null,
       revokedBy: entity.revokedBy,
-      grantedPermissions: entity.grantedPermissions ?? [],
+      roleIds: (entity.roles ?? []).map((role) => role.id),
     });
   }
 
@@ -26,7 +26,6 @@ export class SchoolMembershipMapper {
     }
     entity.schoolId = primitives.schoolId;
     entity.userId = primitives.userId;
-    entity.role = primitives.role;
     entity.status = primitives.status;
     entity.grantedBy = primitives.grantedBy;
     entity.grantedAt = primitives.grantedAt.getTime();
@@ -34,7 +33,7 @@ export class SchoolMembershipMapper {
       ? primitives.revokedAt.getTime()
       : null;
     entity.revokedBy = primitives.revokedBy;
-    entity.grantedPermissions = primitives.grantedPermissions;
+    entity.roles = primitives.roleIds.map((id) => ({ id }) as SchoolRoleEntity);
 
     return entity;
   }
