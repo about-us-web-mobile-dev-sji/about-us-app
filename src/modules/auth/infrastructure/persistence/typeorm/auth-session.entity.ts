@@ -3,7 +3,7 @@ import { millisecondsTransformer } from '../../../../../shared/infrastructure/da
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { AuthIdentityEntity } from './auth-identity.entity.js';
 
-@Entity({ name: 'auth_sessions', schema: 'auth' })
+@Entity({ name: 'auth_sessions', schema: 'authentication' })
 export class AuthSessionEntity {
   @Column({ type: 'text', nullable: true, unique: true })
   refreshTokenHash!: string | null;

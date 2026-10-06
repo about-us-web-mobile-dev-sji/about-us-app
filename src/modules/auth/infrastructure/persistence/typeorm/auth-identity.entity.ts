@@ -9,7 +9,7 @@ import {
 
 @Unique('uq_identity_provider_subject', ['provider', 'providerSubject'])
 @Unique('uq_identity_user_provider', ['userId', 'provider'])
-@Entity({ name: 'auth_identities', schema: 'auth' })
+@Entity({ name: 'auth_identities', schema: 'authentication' })
 export class AuthIdentityEntity {
   @PrimaryColumn('text')
   id!: string;
