@@ -6,18 +6,15 @@ import type { SchoolRepository } from '../../../../domain/repositories/i-school.
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolInvitation } from '../../../../domain/entities/school-invitation.entity.js';
-import { SchoolRoleKey } from '../../../../domain/enums/school-role-key.enum.js';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import { SchoolNameAlreadyExistsException } from '../../../../domain/exceptions/school-name-already-exists.exception.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
 import { UnpersistedSchoolException } from '../../../../domain/exceptions/unpersisted-school.exception.js';
-import type { SchoolRoleRepository } from '../../../../domain/repositories/i-school-role.repository.js';
-import { ensureSystemRoles } from '../../../services/school-role-provisioning.js';
 
 export class CreateSchoolUseCase {
   constructor(
     private readonly schools: SchoolRepository,
     private readonly invitations: SchoolInvitationRepository,
-    private readonly roles: SchoolRoleRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -40,20 +37,20 @@ export class CreateSchoolUseCase {
       phoneNumber: input.phoneNumber,
       email: input.email,
       website: input.website,
+      logo: input.logo,
       createdBy: input.createdBy,
     });
 
     const savedSchool = await this.schools.save(school);
     const primitives = savedSchool.toPrimitives();
     if (!primitives.id) throw new UnpersistedSchoolException();
-    // Every school starts with its system roles.
-    const systemRoles = await ensureSystemRoles(this.roles, primitives.id);
 
     if (primitives.email) {
       const { invitation, token } = SchoolInvitation.issue({
         schoolId: primitives.id,
         email: primitives.email,
-        roleId: systemRoles[SchoolRoleKey.SCHOOL_ADMIN].id,
+        // The address given at creation is invited as the school administrator.
+        role: SchoolRole.ADMIN,
         invitedBy: primitives.createdBy,
       });
       await this.invitations.save(invitation);
@@ -76,6 +73,7 @@ export class CreateSchoolUseCase {
       phoneNumber: primitives.phoneNumber,
       email: primitives.email,
       website: primitives.website,
+      logo: primitives.logo,
       status: primitives.status,
       createdAt: primitives.createdAt,
       updatedAt: primitives.updatedAt,

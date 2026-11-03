@@ -4,5 +4,6 @@ export interface CreateSchoolInput {
   phoneNumber?: string;
   email?: string;
   website?: string;
+  logo?: string;
   createdBy: string;
 }

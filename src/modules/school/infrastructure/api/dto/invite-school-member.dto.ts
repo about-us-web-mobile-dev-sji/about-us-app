@@ -1,10 +1,7 @@
-import { IsEmail, IsOptional, IsUUID } from 'class-validator';
+import { IsEmail } from 'class-validator';
 
+// The invitee always joins as a MEMBER.
 export class InviteSchoolMemberDto {
   @IsEmail()
   email!: string;
-
-  @IsOptional()
-  @IsUUID()
-  roleId?: string;
 }

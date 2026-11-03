@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { summaryOf, type UserSummaries, type UserSummary } from '../../../../user/application/user-directory.js';
 import { IsString, IsOptional, IsUUID, IsEnum, ValidateNested, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SpaceKind } from '../../../domain/enums/space-kind.js';
@@ -229,7 +230,7 @@ export class SpaceMembershipResponseDto {
   spaceId: string;
 
   @ApiProperty()
-  userId: string;
+  user: UserSummary;
 
   @ApiProperty({ enum: SpaceMembershipRole })
   role: SpaceMembershipRole;
@@ -238,7 +239,7 @@ export class SpaceMembershipResponseDto {
   status: SpaceMembershipStatus;
 
   @ApiPropertyOptional()
-  grantedBy?: string | null;
+  grantedBy: UserSummary | null;
 
   @ApiProperty()
   grantedAt: Date;
@@ -247,21 +248,26 @@ export class SpaceMembershipResponseDto {
   revokedAt?: Date | null;
 
   @ApiPropertyOptional()
-  revokedBy?: string | null;
+  revokedBy: UserSummary | null;
 
-  static fromDomain(membership: any): SpaceMembershipResponseDto {
+  static fromDomain(membership: any, users: UserSummaries): SpaceMembershipResponseDto {
     const dto = new SpaceMembershipResponseDto();
     const p = membership.toPrimitives ? membership.toPrimitives() : membership;
     dto.id = p.id;
     dto.spaceId = p.spaceId;
-    dto.userId = p.userId;
+    dto.user = summaryOf(users, p.userId as string);
     dto.role = p.role;
     dto.status = p.status;
-    dto.grantedBy = p.grantedBy ?? null;
+    dto.grantedBy = summaryOf(users, p.grantedBy);
     dto.grantedAt = p.grantedAt;
     dto.revokedAt = p.revokedAt ?? null;
-    dto.revokedBy = p.revokedBy ?? null;
+    dto.revokedBy = summaryOf(users, p.revokedBy);
     return dto;
+  }
+
+  static userIdsOf(membership: any): (string | null)[] {
+    const p = membership.toPrimitives ? membership.toPrimitives() : membership;
+    return [p.userId, p.grantedBy ?? null, p.revokedBy ?? null];
   }
 }
 

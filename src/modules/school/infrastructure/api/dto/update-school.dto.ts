@@ -20,4 +20,9 @@ export class UpdateSchoolDto {
   @IsString()
   @MaxLength(500)
   website?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  logo?: string | null;
 }

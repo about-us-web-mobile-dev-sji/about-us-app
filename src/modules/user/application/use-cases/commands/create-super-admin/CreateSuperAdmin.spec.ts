@@ -10,6 +10,7 @@ function setup() {
     getAll: vi.fn(),
     findSuperAdmin: vi.fn(async () => current),
     findById: vi.fn(async () => current),
+    findByIds: vi.fn(async () => []),
     findByEmail: vi.fn(async () => current),
     superAdminExists: vi.fn(async () => !!current),
     save: vi.fn(async (user) => user),

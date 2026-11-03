@@ -13,6 +13,7 @@ describe('ToggleSchoolStatus', () => {
     phoneNumber: null,
     email: 'contact@ecole.test',
     website: null,
+    logo: null,
     status: SchoolStatus.ACTIVE,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -75,7 +76,7 @@ describe('ToggleSchoolStatus', () => {
     const { repo, stored } = repository(
       School.reconstitute({ ...props, status: SchoolStatus.BLOCKED }),
     );
-    const useCase = new ToggleSchoolStatus(repo);
+    const useCase = new ToggleSchoolStatus(repo, emptySpaces);
 
     const { school } = await useCase.handle({
       schoolId: props.id,

@@ -3,6 +3,7 @@ import { EventLog } from '../../../domain/entities/event-log.js';
 import { EventLogController } from './event-log.controller.js';
 import { EventLogService } from '../../../application/services/event-log.service.js';
 import { ListEventLogs } from '../../../application/usecases/queries/list-event-log/list-event-logs.js';
+import type { UserDirectory } from '../../../../user/application/user-directory.js';
 import { GetEventLog } from '../../../application/usecases/command/get-event-log/get-event-log.js';
 
 describe('EventLogController', () => {
@@ -19,6 +20,7 @@ describe('EventLogController', () => {
       {} as ListEventLogs,
       {} as GetEventLog,
       { findByAggregate } as unknown as EventLogService,
+      { summaries: async () => new Map() } as unknown as UserDirectory,
     );
 
     const result = await controller.findByAggregate(
@@ -37,7 +39,7 @@ describe('EventLogController', () => {
         message: "Le statut de l'utilisateur a été mis à jour.",
         entityType: 'user',
         entityId: '33333333-3333-4333-8333-333333333333',
-        actorId: null,
+        actor: null,
         payload: { status: 'suspended' },
         occurredAt: eventLog.occurredAt,
       },

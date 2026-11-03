@@ -4,7 +4,8 @@ import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolInvitation } from '../../../../domain/entities/school-invitation.entity.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
 import { InvitationStatus } from '../../../../domain/enums/invitation-status.enum.js';
-import { ROLE, inMemoryMemberships, inMemoryRoles } from '../../../testing/school-test-helpers.js';
+import { inMemoryMemberships } from '../../../testing/school-test-helpers.js';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
@@ -12,7 +13,6 @@ import { SchoolAdministratorAlreadyAssignedException } from '../../../../domain/
 import { SchoolInvitationInvalidException } from '../../../../domain/exceptions/school-invitation-invalid.exception.js';
 import { SchoolInvitationMismatchException } from '../../../../domain/exceptions/school-invitation-mismatch.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
-import { SchoolRoleNotFoundException } from '../../../../domain/exceptions/school-role-not-found.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
@@ -32,6 +32,7 @@ describe('AcceptSchoolInvitation', () => {
       phoneNumber: null,
       email: invitedEmail,
       website: null,
+      logo: null,
       status,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -43,13 +44,13 @@ describe('AcceptSchoolInvitation', () => {
       email?: string;
       ttlMs?: number;
       schoolId?: string;
-      roleId?: string;
+      role?: SchoolRole;
     } = {},
   ) => {
     const { invitation, token } = SchoolInvitation.issue({
       schoolId: overrides.schoolId ?? schoolId,
       email: overrides.email ?? invitedEmail,
-      roleId: overrides.roleId ?? ROLE.admin,
+      role: overrides.role ?? SchoolRole.ADMIN,
       invitedBy: inviterId,
       ttlMs: overrides.ttlMs,
     });
@@ -64,14 +65,14 @@ describe('AcceptSchoolInvitation', () => {
 
   const membership = (o: {
     userId: string;
-    roleId?: string;
+    role?: SchoolRole;
     status?: MembershipStatus;
   }) =>
     SchoolMembership.reconstitute({
       id: `membership-${o.userId}`,
       schoolId,
       userId: o.userId,
-      roleIds: [o.roleId ?? ROLE.student],
+      role: o.role ?? SchoolRole.MEMBER,
       status: o.status ?? MembershipStatus.ACTIVE,
       grantedBy: inviterId,
       grantedAt: new Date(),
@@ -95,6 +96,8 @@ describe('AcceptSchoolInvitation', () => {
     } as unknown as SchoolRepository;
 
     const invitationRepo: SchoolInvitationRepository = {
+      findById: async () => null,
+      findBySchoolPaginated: async () => ({ items: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
       hasPendingForEmail: async () => false,
       findByTokenHash: async (hash) =>
         invitations.find((i) => i.toPrimitives().tokenHash === hash) ?? null,
@@ -109,7 +112,6 @@ describe('AcceptSchoolInvitation', () => {
 
     const store = inMemoryMemberships(memberships);
     const membershipRepo = store.repo;
-    const roles = inMemoryRoles();
 
     const accounts = o.accounts ?? { [invitedUserId]: invitedEmail };
     const users = {
@@ -124,7 +126,6 @@ describe('AcceptSchoolInvitation', () => {
         schools,
         invitationRepo,
         membershipRepo,
-        roles.repo,
         users,
         emitter as never,
       ),
@@ -150,7 +151,7 @@ describe('AcceptSchoolInvitation', () => {
 
     expect(school.name).toBe('École test');
     expect(created.userId).toBe(invitedUserId);
-    expect(created.roleIds).toEqual([ROLE.admin]);
+    expect(created.role).toBe(SchoolRole.ADMIN);
     expect(created.status).toBe(MembershipStatus.ACTIVE);
     expect(created.grantedBy).toBe(inviterId);
     expect(ctx.memberships()).toHaveLength(1);
@@ -180,7 +181,7 @@ describe('AcceptSchoolInvitation', () => {
       userId: invitedUserId,
     });
 
-    expect(created.roleIds).toEqual([ROLE.admin]);
+    expect(created.role).toBe(SchoolRole.ADMIN);
   });
 
   it('promotes an existing member and reactivates a suspended membership', async () => {
@@ -198,7 +199,7 @@ describe('AcceptSchoolInvitation', () => {
       userId: invitedUserId,
     });
 
-    expect(promoted.roleIds).toEqual([ROLE.student, ROLE.admin]);
+    expect(promoted.role).toBe(SchoolRole.ADMIN);
     expect(promoted.status).toBe(MembershipStatus.ACTIVE);
     expect(ctx.memberships()).toHaveLength(1);
   });
@@ -296,7 +297,7 @@ describe('AcceptSchoolInvitation', () => {
     const ctx = setup({
       invitations: [invitation],
       memberships: [
-        membership({ userId: otherUserId, roleId: ROLE.admin }),
+        membership({ userId: otherUserId, role: SchoolRole.ADMIN }),
       ],
     });
 
@@ -324,11 +325,11 @@ describe('AcceptSchoolInvitation', () => {
 
   describe('member invitations', () => {
     it('adds the invitee as a plain member, even when the school has an admin', async () => {
-      const { invitation, token } = issue({ roleId: ROLE.student });
+      const { invitation, token } = issue({ role: SchoolRole.MEMBER });
       const ctx = setup({
         invitations: [invitation],
         memberships: [
-          membership({ userId: otherUserId, roleId: ROLE.admin }),
+          membership({ userId: otherUserId, role: SchoolRole.ADMIN }),
         ],
       });
 
@@ -338,18 +339,18 @@ describe('AcceptSchoolInvitation', () => {
         userId: invitedUserId,
       });
 
-      expect(created.roleIds).toEqual([ROLE.student]);
+      expect(created.role).toBe(SchoolRole.MEMBER);
       expect(created.status).toBe(MembershipStatus.ACTIVE);
       expect(created.grantedBy).toBe(inviterId);
       expect(ctx.memberships()).toHaveLength(2);
     });
 
     it('never demotes an administrator who accepts a member invitation', async () => {
-      const { invitation, token } = issue({ roleId: ROLE.student });
+      const { invitation, token } = issue({ role: SchoolRole.MEMBER });
       const ctx = setup({
         invitations: [invitation],
         memberships: [
-          membership({ userId: invitedUserId, roleId: ROLE.admin }),
+          membership({ userId: invitedUserId, role: SchoolRole.ADMIN }),
         ],
       });
 
@@ -359,11 +360,11 @@ describe('AcceptSchoolInvitation', () => {
         userId: invitedUserId,
       });
 
-      expect(kept.roleIds).toEqual([ROLE.admin, ROLE.student]);
+      expect(kept.role).toBe(SchoolRole.ADMIN);
     });
 
     it('reactivates an inactive member', async () => {
-      const { invitation, token } = issue({ roleId: ROLE.student });
+      const { invitation, token } = issue({ role: SchoolRole.MEMBER });
       const ctx = setup({
         invitations: [invitation],
         memberships: [
@@ -380,8 +381,8 @@ describe('AcceptSchoolInvitation', () => {
       expect(back.status).toBe(MembershipStatus.ACTIVE);
     });
 
-    it('adds the invited role to the roles a member already holds', async () => {
-      const { invitation, token } = issue({ roleId: ROLE.staff });
+    it('keeps the role of a member who accepts another member invitation', async () => {
+      const { invitation, token } = issue({ role: SchoolRole.MEMBER });
       const ctx = setup({
         invitations: [invitation],
         memberships: [membership({ userId: invitedUserId })],
@@ -393,21 +394,12 @@ describe('AcceptSchoolInvitation', () => {
         userId: invitedUserId,
       });
 
-      expect(updated.roleIds).toEqual([ROLE.student, ROLE.staff]);
-    });
-
-    it('refuses an invitation whose role no longer exists', async () => {
-      const { invitation, token } = issue({ roleId: 'deleted-role' });
-      const ctx = setup({ invitations: [invitation] });
-
-      await expect(
-        ctx.useCase.handle({ schoolId, token, userId: invitedUserId }),
-      ).rejects.toBeInstanceOf(SchoolRoleNotFoundException);
-      expect(ctx.memberships()).toHaveLength(0);
+      expect(updated.role).toBe(SchoolRole.MEMBER);
+      expect(ctx.memberships()).toHaveLength(1);
     });
 
     it('cannot be used to lift a suspension', async () => {
-      const { invitation, token } = issue({ roleId: ROLE.student });
+      const { invitation, token } = issue({ role: SchoolRole.MEMBER });
       const ctx = setup({
         invitations: [invitation],
         memberships: [

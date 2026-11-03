@@ -1,13 +1,7 @@
-import {
-  Entity,
-  Column,
-  JoinTable,
-  ManyToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import { MembershipStatus } from '../../../domain/enums/membership-status.enum.js';
+import { SchoolRole } from '../../../domain/enums/school-role.enum.js';
 import { millisecondsTransformer } from '../../../../../shared/infrastructure/database/milliseconds.transformer.js';
-import { SchoolRoleEntity } from './school-role.entity.js';
 
 
 @Entity({ schema: 'school', name: 'school_memberships' })
@@ -21,16 +15,13 @@ export class SchoolMembershipEntity {
   @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
-  @ManyToMany(() => SchoolRoleEntity, (role) => role.memberships, {
-    eager: true,
+  @Column({
+    type: 'enum',
+    enum: SchoolRole,
+    enumName: 'school_role',
+    default: SchoolRole.MEMBER,
   })
-  @JoinTable({
-    schema: 'school',
-    name: 'school_membership_roles',
-    joinColumn: { name: 'membership_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'school_role_id', referencedColumnName: 'id' },
-  })
-  roles!: SchoolRoleEntity[];
+  role!: SchoolRole;
 
   @Column({
     type: 'enum',

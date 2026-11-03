@@ -1,9 +1,10 @@
-import { Injectable, type ExecutionContext } from '@nestjs/common';
+import { Inject, Injectable, type ExecutionContext } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 import { DomainException } from '../../../../shared/domain/exceptions/domain.exception.js';
 import { GoogleLoginFailedException } from '../../domain/exceptions/google-login-failed.exception.js';
-import { rememberReturnUrl } from '../api/google-return-url.js';
+import { googleCallbackPath, rememberReturnUrl } from '../api/google-return-url.js';
 
 export type GoogleCallbackRequest = Request & { googleAuthErrorCode?: string };
 
@@ -29,13 +30,16 @@ export class GoogleAuthGuard extends AuthGuard('google') {
 /** Entry point of the Google sign-in: remembers ?returnUrl before redirecting to Google. */
 @Injectable()
 export class GoogleLoginStartGuard extends GoogleAuthGuard {
+  constructor(@Inject(ConfigService) private readonly config: ConfigService) {
+    super();
+  }
+
   canActivate(context: ExecutionContext) {
     const http = context.switchToHttp();
-    rememberReturnUrl(
-      http.getRequest<Request>(),
-      http.getResponse(),
-      process.env.NODE_ENV === 'production',
-    );
+    rememberReturnUrl(http.getRequest<Request>(), http.getResponse(), {
+      secure: this.config.get('NODE_ENV') === 'production',
+      path: googleCallbackPath(this.config),
+    });
     return super.canActivate(context);
   }
 }

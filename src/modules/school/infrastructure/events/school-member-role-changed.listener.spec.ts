@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SchoolRole } from '../../domain/enums/school-role.enum.js';
 import { Test } from '@nestjs/testing';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import type { INestApplication } from '@nestjs/common';
@@ -27,8 +28,7 @@ describe('SchoolMemberRoleChangedListener', () => {
         '11111111-1111-4111-8111-111111111111',
         'École test',
         'member-1',
-        'role-1',
-        'Personnel',
+        SchoolRole.ADMIN,
         'ASSIGNED',
         'root',
       ),
@@ -41,8 +41,7 @@ describe('SchoolMemberRoleChangedListener', () => {
         entityId: '11111111-1111-4111-8111-111111111111',
         payload: expect.objectContaining({
           memberUserId: 'member-1',
-          roleId: 'role-1',
-          roleName: 'Personnel',
+          role: SchoolRole.ADMIN,
           change: 'ASSIGNED',
           changedBy: 'root',
         }),

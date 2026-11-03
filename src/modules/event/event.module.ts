@@ -4,6 +4,7 @@ import { EVENT_LOG_REPOSITORY } from './domain/repositories/event-log.repository
 import { EventLogListener } from './infrastructure/events/event-log.listener.js';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserModule } from '../user/user.module.js';
 import { EventLogEntity } from './infrastructure/persistence/typeorm/event-log.entity.js';
 import { TypeormEventLogRepository } from './infrastructure/persistence/typeorm-event-log.repository.js';
 import { EventLogController } from './infrastructure/api/controllers/event-log.controller.js';
@@ -12,10 +13,9 @@ import { GetEventLog } from './application/usecases/command/get-event-log/get-ev
 import { InvitationSentListener } from '../school/infrastructure/events/invitation-sent.listener.js';
 import { InvitationAcceptedListener } from '../school/infrastructure/events/invitation-accepted.listener.js';
 import { SchoolMemberRoleChangedListener } from '../school/infrastructure/events/school-member-role-changed.listener.js';
-import { SchoolRoleChangedListener } from '../school/infrastructure/events/school-role-changed.listener.js';
 
 @Module({
-  imports: [DatabaseModule, TypeOrmModule.forFeature([EventLogEntity])],
+  imports: [DatabaseModule, TypeOrmModule.forFeature([EventLogEntity]), UserModule],
   controllers: [EventLogController],
   providers: [
     EventLogService,
@@ -25,7 +25,6 @@ import { SchoolRoleChangedListener } from '../school/infrastructure/events/schoo
     InvitationSentListener,
     InvitationAcceptedListener,
     SchoolMemberRoleChangedListener,
-    SchoolRoleChangedListener,
     {
       provide: EVENT_LOG_REPOSITORY,
       useClass: TypeormEventLogRepository,

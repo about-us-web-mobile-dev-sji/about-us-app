@@ -1,4 +1,5 @@
 import type { EventLog } from '../../../../domain/entities/event-log.js';
+import { summaryOf, type UserSummaries, type UserSummary } from '../../../../../user/application/user-directory.js';
 import type { ListEventLogsOutput } from '../../../../application/usecases/queries/list-event-log/list-event-logs.output.js';
 
 export interface EventLogResponse {
@@ -7,7 +8,7 @@ export interface EventLogResponse {
   message: string;
   entityType: string;
   entityId: string;
-  actorId: string | null;
+  actor: UserSummary | null;
   payload: Record<string, unknown>;
   occurredAt: Date;
 }
@@ -21,22 +22,22 @@ export interface ListEventLogsResponse {
 }
 
 export const EventLogResponseMapper = {
-  one(log: EventLog): EventLogResponse {
+  one(log: EventLog, users: UserSummaries): EventLogResponse {
     return {
       id: log.id,
       name: log.name,
       message: log.message,
       entityType: log.entityType,
       entityId: log.entityId,
-      actorId: log.actorId ?? null,
+      actor: summaryOf(users, log.actorId),
       payload: log.payload,
       occurredAt: log.occurredAt,
     };
   },
 
-  list(output: ListEventLogsOutput): ListEventLogsResponse {
+  list(output: ListEventLogsOutput, users: UserSummaries): ListEventLogsResponse {
     return {
-      items: output.items.map((log) => EventLogResponseMapper.one(log)),
+      items: output.items.map((log) => EventLogResponseMapper.one(log, users)),
       total: output.total,
       page: output.page,
       limit: output.limit,

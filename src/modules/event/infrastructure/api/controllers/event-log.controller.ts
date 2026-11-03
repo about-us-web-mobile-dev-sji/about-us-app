@@ -16,6 +16,7 @@ import {
   type EventLogListRequest,
 } from '../dto/requests/event-log.request.js';
 import { EventLogResponseMapper } from '../dto/responses/event-log.response.js';
+import { UserDirectory } from '../../../../user/application/user-directory.js';
 
 @Controller('event-logs')
 export class EventLogController {
@@ -23,6 +24,7 @@ export class EventLogController {
     private readonly listEventLogs: ListEventLogs,
     private readonly getEventLog: GetEventLog,
     private readonly eventLogs: EventLogService,
+    private readonly directory: UserDirectory,
   ) {}
 
   @Get()
@@ -33,7 +35,9 @@ export class EventLogController {
         'La page et la limite des journaux d\'événements doivent être positives.',
       );
 
-    return EventLogResponseMapper.list(await this.listEventLogs.execute(input));
+    const output = await this.listEventLogs.execute(input);
+    const users = await this.directory.summaries(output.items.map((log) => log.actorId));
+    return EventLogResponseMapper.list(output, users);
   }
 
   @Get('aggregate/:entityType/:entityId')
@@ -42,7 +46,8 @@ export class EventLogController {
     @Param('entityId', new ParseUUIDPipe({ version: '4' })) entityId: UUID,
   ) {
     const logs = await this.eventLogs.findByAggregate(entityType, entityId);
-    return logs.map((log) => EventLogResponseMapper.one(log));
+    const users = await this.directory.summaries(logs.map((log) => log.actorId));
+    return logs.map((log) => EventLogResponseMapper.one(log, users));
   }
 
   @Get(':id')
@@ -54,6 +59,6 @@ export class EventLogController {
       );
     }
 
-    return EventLogResponseMapper.one(log);
+    return EventLogResponseMapper.one(log, await this.directory.summaries([log.actorId]));
   }
 }
