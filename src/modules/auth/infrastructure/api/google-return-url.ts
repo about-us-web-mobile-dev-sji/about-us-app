@@ -1,7 +1,13 @@
 import type { Request, Response } from 'express';
 
+import type { ConfigService } from '@nestjs/config';
+
 const COOKIE = 'google_return_url';
-const CALLBACK_PATH = '/auth/web/google/callback';
+
+/** Google callback path as seen by the browser (proxy prefix included). */
+export function googleCallbackPath(config: ConfigService): string {
+  return `${config.get<string>('auth.publicPathPrefix') ?? ''}/auth/web/google/callback`;
+}
 
 /** Same-app absolute path only (no "//host", "/\\host" or scheme). */
 export function safeReturnUrl(value: unknown): string | null {
@@ -15,20 +21,24 @@ export function safeReturnUrl(value: unknown): string | null {
 }
 
 /** Keeps the page to reopen after Google, for the duration of the OAuth round trip. */
-export function rememberReturnUrl(req: Request, res: Response, secure: boolean): void {
+export function rememberReturnUrl(
+  req: Request,
+  res: Response,
+  options: { secure: boolean; path: string },
+): void {
   const returnUrl = safeReturnUrl(req.query.returnUrl);
   if (!returnUrl) return;
   res.cookie(COOKIE, returnUrl, {
     httpOnly: true,
-    secure,
+    secure: options.secure,
     sameSite: 'lax',
-    path: CALLBACK_PATH,
+    path: options.path,
     maxAge: 300000,
   });
 }
 
-export function takeReturnUrl(req: Request, res: Response): string | null {
+export function takeReturnUrl(req: Request, res: Response, path: string): string | null {
   const returnUrl = safeReturnUrl(req.cookies?.[COOKIE]);
-  res.clearCookie(COOKIE, { path: CALLBACK_PATH });
+  res.clearCookie(COOKIE, { path });
   return returnUrl;
 }

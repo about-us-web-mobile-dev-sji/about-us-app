@@ -1,24 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { CancelSchoolMemberSuspensionUseCase } from './cancel-school-member-suspension.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
-import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolMembershipNotFoundException } from '../../../../domain/exceptions/school-membership-not-found.exception.js';
-import { ROLE, SCHOOL_ID, customRole, defaultRoles, membershipOf, world } from '../../../testing/school-test-helpers.js';
+import { SCHOOL_ID, membershipOf, world } from '../../../testing/school-test-helpers.js';
 
-const ACTION = SchoolAction.CANCEL_SUSPENSION;
-const delegate = customRole('role-delegate', 'Délégué', [ACTION]);
-const roles = () => [...defaultRoles(), delegate];
 const TARGET_STATUS = MembershipStatus.SUSPENDED;
 
 const build = (members = [
-  membershipOf('admin', [ROLE.admin]),
-  membershipOf('member', [ROLE.student], TARGET_STATUS),
+  membershipOf('admin', SchoolRole.ADMIN),
+  membershipOf('member', SchoolRole.MEMBER, TARGET_STATUS),
 ], schoolStatus = SchoolStatus.ACTIVE) => {
-  const w = world(members, { roles: roles(), schoolStatus });
+  const w = world(members, { schoolStatus });
   return { w, useCase: new CancelSchoolMemberSuspensionUseCase(w.memberships.repo, w.authorization) };
 };
 const input = (performedBy: string, memberUserId = 'member') => ({ schoolId: SCHOOL_ID, memberUserId, performedBy });
@@ -31,20 +28,12 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
     expect(w.memberships.get('member').status).toBe(MembershipStatus.ACTIVE);
   });
 
-  it('lets a member whose role carries the permission do it', async () => {
+  it('refuses a member', async () => {
     const { useCase } = build([
-      membershipOf('deleg', ['role-delegate']),
-      membershipOf('member', [ROLE.student], TARGET_STATUS),
+      membershipOf('other', SchoolRole.MEMBER),
+      membershipOf('member', SchoolRole.MEMBER, TARGET_STATUS),
     ]);
-    await expect(useCase.handle(input('deleg'))).resolves.toBeDefined();
-  });
-
-  it('refuses a member whose roles do not carry the permission', async () => {
-    const { useCase } = build([
-      membershipOf('staff', [ROLE.staff]),
-      membershipOf('member', [ROLE.student], TARGET_STATUS),
-    ]);
-    await expect(useCase.handle(input('staff'))).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    await expect(useCase.handle(input('other'))).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
   it('refuses someone who is not a member of the school', async () => {
@@ -54,39 +43,34 @@ describe('CancelSchoolMemberSuspensionUseCase', () => {
 
   it('refuses an administrator whose membership is suspended', async () => {
     const { useCase } = build([
-      membershipOf('admin', [ROLE.admin], MembershipStatus.SUSPENDED),
-      membershipOf('member', [ROLE.student], TARGET_STATUS),
+      membershipOf('admin', SchoolRole.ADMIN, MembershipStatus.SUSPENDED),
+      membershipOf('member', SchoolRole.MEMBER, TARGET_STATUS),
     ]);
     await expect(useCase.handle(input('admin'))).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
-  it('refuses a delegate acting on the administrator', async () => {
+  it('refuses a member acting on the administrator', async () => {
     const { useCase } = build([
-      membershipOf('admin', [ROLE.admin], TARGET_STATUS),
-      membershipOf('deleg', ['role-delegate']),
+      membershipOf('admin', SchoolRole.ADMIN, TARGET_STATUS),
+      membershipOf('member', SchoolRole.MEMBER),
     ]);
-    await expect(useCase.handle(input('deleg', 'admin'))).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
-  });
-
-  it('refuses a delegate acting on themselves', async () => {
-    const { useCase } = build([membershipOf('deleg', ['role-delegate'], MembershipStatus.ACTIVE)]);
-    await expect(useCase.handle(input('deleg', 'deleg'))).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
+    await expect(useCase.handle(input('member', 'admin'))).rejects.toBeInstanceOf(SchoolMembershipActionForbiddenException);
   });
 
   it('refuses an administrator acting on themselves', async () => {
-    const { useCase } = build([membershipOf('admin', [ROLE.admin], MembershipStatus.ACTIVE)]);
+    const { useCase } = build([membershipOf('admin', SchoolRole.ADMIN, MembershipStatus.ACTIVE)]);
     await expect(useCase.handle(input('admin', 'admin'))).rejects.toThrow();
   });
 
   it('throws when the target has no membership in the school', async () => {
-    const { useCase } = build([membershipOf('admin', [ROLE.admin])]);
+    const { useCase } = build([membershipOf('admin', SchoolRole.ADMIN)]);
     await expect(useCase.handle(input('admin'))).rejects.toBeInstanceOf(SchoolMembershipNotFoundException);
   });
 
   it('refuses a target that is in the wrong state', async () => {
     const { useCase } = build([
-      membershipOf('admin', [ROLE.admin]),
-      membershipOf('member', [ROLE.student], MembershipStatus.REVOKED),
+      membershipOf('admin', SchoolRole.ADMIN),
+      membershipOf('member', SchoolRole.MEMBER, MembershipStatus.REVOKED),
     ]);
     await expect(useCase.handle(input('admin'))).rejects.toBeInstanceOf(InvalidSchoolMembershipException);
   });

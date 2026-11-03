@@ -12,13 +12,12 @@ export class SchoolMemberRoleChangedListener {
   async handle(event: SchoolMemberRoleChangedEvent) {
     await this.eventLog.record({
       name: 'school.member-role.changed',
-      message: `Les rôles d'un membre de l'école "${event.schoolName}" ont été modifiés.`,
+      message: `Le rôle d'un membre de l'école "${event.schoolName}" a été modifié.`,
       entityType: 'school',
       entityId: event.schoolId as UUID,
       payload: {
         memberUserId: event.memberUserId,
-        roleId: event.roleId,
-        roleName: event.roleName,
+        role: event.role,
         change: event.change,
         changedBy: event.changedBy,
         recipientIds: event.recipientIds,

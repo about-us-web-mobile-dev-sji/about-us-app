@@ -1,45 +1,33 @@
-import type {
-  SchoolMembershipOutput,
-  SchoolRoleSummary,
-} from '../../../../application/use-cases/school.output.js';
+import type { SchoolMembershipOutput } from '../../../../application/use-cases/school.output.js';
+import type { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
+import { summaryOf, type UserSummaries, type UserSummary } from '../../../../../user/application/user-directory.js';
 
 export class MembershipResponse {
   id!: string;
   schoolId!: string;
-  userId!: string;
-  roleIds!: string[];
-  roles?: SchoolRoleSummary[];
+  user!: UserSummary;
+  role!: SchoolRole;
   status!: string;
-  grantedBy!: string | null;
+  grantedBy!: UserSummary | null;
   grantedAt!: Date;
   revokedAt!: Date | null;
-  revokedBy!: string | null;
-  email?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
+  revokedBy!: UserSummary | null;
 
-  static fromOutput(
-    output: SchoolMembershipOutput & {
-      roles?: SchoolRoleSummary[];
-      email?: string | null;
-      firstName?: string | null;
-      lastName?: string | null;
-    },
-  ): MembershipResponse {
+  static fromOutput(output: SchoolMembershipOutput, users: UserSummaries): MembershipResponse {
     return {
       id: output.id,
       schoolId: output.schoolId,
-      userId: output.userId,
-      roleIds: output.roleIds,
+      user: summaryOf(users, output.userId),
+      role: output.role,
       status: output.status,
-      grantedBy: output.grantedBy,
+      grantedBy: summaryOf(users, output.grantedBy),
       grantedAt: output.grantedAt,
       revokedAt: output.revokedAt,
-      revokedBy: output.revokedBy,
-      ...(output.roles !== undefined && { roles: output.roles }),
-      ...(output.email !== undefined && { email: output.email }),
-      ...(output.firstName !== undefined && { firstName: output.firstName }),
-      ...(output.lastName !== undefined && { lastName: output.lastName }),
+      revokedBy: summaryOf(users, output.revokedBy),
     };
+  }
+
+  static userIdsOf(output: SchoolMembershipOutput): (string | null)[] {
+    return [output.userId, output.grantedBy, output.revokedBy];
   }
 }

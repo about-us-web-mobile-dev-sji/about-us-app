@@ -4,9 +4,7 @@ import type { SchoolRepository } from '../../../../domain/repositories/i-school.
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
-import { SchoolRoleKey } from '../../../../domain/enums/school-role-key.enum.js';
-import type { SchoolRoleRepository } from '../../../../domain/repositories/i-school-role.repository.js';
-import { ensureSystemRoles } from '../../../services/school-role-provisioning.js';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import { SchoolMemberRoleChangedEvent } from '../../../events/school-member-role-changed.event.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
@@ -17,7 +15,6 @@ export class ReplaceSchoolAdministratorUseCase {
   constructor(
     private readonly schools: SchoolRepository,
     private readonly memberships: SchoolMembershipRepository,
-    private readonly roles: SchoolRoleRepository,
     private readonly users: UserAccountService,
     private readonly roleChanged: (event: SchoolMemberRoleChangedEvent) => void = () => {},
   ) {}
@@ -46,15 +43,12 @@ export class ReplaceSchoolAdministratorUseCase {
     }
 
     // The school's administrator is whoever holds a live membership with the
-    // administrator role; the school itself stores no admin reference.
-    const adminRole = (await ensureSystemRoles(this.roles, input.schoolId))[
-      SchoolRoleKey.SCHOOL_ADMIN
-    ];
+    // ADMIN role; the school itself stores no admin reference.
     const schoolMemberships = await this.memberships.findBySchool(
       input.schoolId,
     );
     const currentAdmins = schoolMemberships.filter(
-      (m) => m.hasRole(adminRole.id) && m.status !== MembershipStatus.REVOKED,
+      (m) => m.isAdmin && m.status !== MembershipStatus.REVOKED,
     );
 
     if (
@@ -91,14 +85,14 @@ export class ReplaceSchoolAdministratorUseCase {
 
     if (existingMembership) {
       existingMembership.activate();
-      existingMembership.assignRole(adminRole.id);
+      existingMembership.changeRole(SchoolRole.ADMIN);
       await this.memberships.save(existingMembership);
     } else {
       await this.memberships.save(
         SchoolMembership.create({
           schoolId: input.schoolId,
           userId: input.newAdminUserId,
-          roleIds: [adminRole.id],
+          role: SchoolRole.ADMIN,
           grantedBy: input.performedBy,
         }),
       );
@@ -109,8 +103,7 @@ export class ReplaceSchoolAdministratorUseCase {
         input.schoolId,
         school.toPrimitives().name,
         input.newAdminUserId,
-        adminRole.id,
-        adminRole.name,
+        SchoolRole.ADMIN,
         'ASSIGNED',
         input.performedBy,
         [previousAdminUserId, input.newAdminUserId].filter(

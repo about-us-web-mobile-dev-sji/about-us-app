@@ -21,7 +21,6 @@ describe('CreateSchool error handling', () => {
     const useCase = new CreateSchoolUseCase(
       { findByName: vi.fn().mockResolvedValue({}) } as unknown as SchoolRepository,
       {} as unknown as SchoolInvitationRepository,
-      {} as never,
       { emit: vi.fn() } as never,
     );
 
@@ -46,7 +45,6 @@ describe('CreateSchool error handling', () => {
         findByName: vi.fn().mockRejectedValue(new Error('database password=secret')),
       } as unknown as SchoolRepository,
       {} as unknown as SchoolInvitationRepository,
-      {} as never,
       { emit: vi.fn() } as never,
     );
 

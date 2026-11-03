@@ -9,6 +9,7 @@ export class SchoolMapper {
       phoneNumber: entity.phoneNumber,
       email: entity.email,
       website: entity.website,
+      logo: entity.logo,
       status: entity.status,
       createdAt: new Date(entity.createdAt),
       updatedAt: new Date(entity.updatedAt),
@@ -27,6 +28,7 @@ export class SchoolMapper {
     entity.phoneNumber = primitives.phoneNumber;
     entity.email = primitives.email;
     entity.website = primitives.website;
+    entity.logo = primitives.logo;
     entity.status = primitives.status;
     entity.createdAt = primitives.createdAt.getTime();
     entity.updatedAt = primitives.updatedAt.getTime();

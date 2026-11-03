@@ -13,6 +13,7 @@ import {
   EventEmitter2,
 } from '@nestjs/event-emitter';
 import { UserAccountService } from './application/user-account.service.js';
+import { UserDirectory } from './application/user-directory.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import {
@@ -38,7 +39,7 @@ import { SchoolMembershipEntity } from '../school/infrastructure/persistence/typ
     TypeOrmModule.forFeature([UserEntity, SchoolMembershipEntity]),
   ],
   controllers: [UserController],
-  exports: [UserAccountService],
+  exports: [UserAccountService, UserDirectory],
   providers: [
     ListUsers,
     {
@@ -76,6 +77,11 @@ import { SchoolMembershipEntity } from '../school/infrastructure/persistence/typ
           emitter.emit('user.created', { subjectId: id });
         }),
       inject: [USER_REPOSITORY, EventEmitter2],
+    },
+    {
+      provide: UserDirectory,
+      useFactory: (users: UserRepository) => new UserDirectory(users),
+      inject: [USER_REPOSITORY],
     },
     {
       provide: USER_REPOSITORY,

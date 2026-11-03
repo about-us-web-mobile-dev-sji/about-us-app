@@ -7,7 +7,8 @@ import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidReplacementException } from '../../../../domain/exceptions/invalid-replacement.exception.js';
 import { SchoolAdministratorNotFoundException } from '../../../../domain/exceptions/school-administrator-not-found.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
-import { ROLE, inMemoryMemberships, inMemoryRoles } from '../../../testing/school-test-helpers.js';
+import { inMemoryMemberships } from '../../../testing/school-test-helpers.js';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 
@@ -23,6 +24,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
     phoneNumber: null,
     email: null,
     website: null,
+    logo: null,
     status: SchoolStatus.ACTIVE,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -40,7 +42,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       id: `membership-${userId}`,
       schoolId,
       userId,
-      roleIds: [role === ADMIN ? ROLE.admin : ROLE.student],
+      role: role === ADMIN ? SchoolRole.ADMIN : SchoolRole.MEMBER,
       status,
       grantedBy: performedBy,
       grantedAt: new Date(),
@@ -54,7 +56,6 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       findById: async (id: string) => (id === schoolId ? school : null),
     } as unknown as SchoolRepository;
     const memberships = store.repo;
-    const roles = inMemoryRoles();
     const users = {
       exists: async (id: string) => existingUsers.includes(id),
     } as unknown as UserAccountService;
@@ -63,7 +64,6 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       useCase: new ReplaceSchoolAdministratorUseCase(
         schools,
         memberships,
-        roles.repo,
         users,
         roleChanged,
       ),
@@ -91,7 +91,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
     expect(old.status).toBe(MembershipStatus.REVOKED);
     expect(old.revokedBy).toBe(performedBy);
     const created = ctx.all().find((m) => m.userId === newAdminId)!;
-    expect(created.roleIds).toContain(ROLE.admin);
+    expect(created.role).toBe(SchoolRole.ADMIN);
     expect(created.status).toBe(MembershipStatus.ACTIVE);
   });
 
@@ -140,7 +140,7 @@ describe('ReplaceSchoolAdministratorUseCase', () => {
       });
 
       const promoted = ctx.all().find((m) => m.userId === newAdminId)!;
-      expect(promoted.roleIds).toEqual([ROLE.student, ROLE.admin]);
+      expect(promoted.role).toBe(SchoolRole.ADMIN);
       expect(promoted.status).toBe(MembershipStatus.ACTIVE);
       expect(out.newMembershipCreated).toBe(false);
     }

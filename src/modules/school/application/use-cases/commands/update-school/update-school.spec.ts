@@ -18,6 +18,7 @@ const makeSchool = (id: string, name: string) =>
     phoneNumber: null,
     email: null,
     website: null,
+    logo: null,
     status: SchoolStatus.ACTIVE,
     createdAt: new Date(2026, 0, 1),
     updatedAt: new Date(2026, 0, 1),

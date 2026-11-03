@@ -1,4 +1,5 @@
 import { MembershipStatus } from '../enums/membership-status.enum.js';
+import { SchoolRole } from '../enums/school-role.enum.js';
 import { InvalidSchoolMembershipException } from '../exceptions/invalid-school-membership.exception.js';
 
 export interface SchoolMembershipProps {
@@ -10,7 +11,7 @@ export interface SchoolMembershipProps {
   grantedAt: Date;
   revokedAt: Date | null;
   revokedBy: string | null;
-  roleIds: string[];
+  role: SchoolRole;
 }
 
 export class SchoolMembership {
@@ -19,7 +20,7 @@ export class SchoolMembership {
   static create(input: {
     schoolId: string;
     userId: string;
-    roleIds: readonly string[];
+    role?: SchoolRole;
     grantedBy: string;
   }): SchoolMembership {
     const now = new Date();
@@ -34,9 +35,9 @@ export class SchoolMembership {
           throw new InvalidSchoolMembershipException('GrantedBy is required');
     }
 
-    const roleIds = [...new Set(input.roleIds.filter((id) => id?.trim()).map((id) => id.trim()))];
-    if (roleIds.length === 0) {
-      throw new InvalidSchoolMembershipException('At least one role is required');
+    const role = input.role ?? SchoolRole.MEMBER;
+    if (!Object.values(SchoolRole).includes(role)) {
+      throw new InvalidSchoolMembershipException('Invalid school role');
     }
 
     return new SchoolMembership({
@@ -48,7 +49,7 @@ export class SchoolMembership {
       grantedAt: now,
       revokedAt: null,
       revokedBy: null,
-      roleIds,
+      role,
     });
   }
 
@@ -88,43 +89,27 @@ export class SchoolMembership {
     return this.props.revokedBy;
   }
 
-  get roleIds(): readonly string[] {
-    return [...this.props.roleIds];
+  get role(): SchoolRole {
+    return this.props.role;
   }
 
-  hasRole(roleId: string): boolean {
-    return this.props.roleIds.includes(roleId);
+  get isAdmin(): boolean {
+    return this.props.role === SchoolRole.ADMIN;
   }
 
-  assignRole(roleId: string): boolean {
-    this.assertRolesEditable();
-    if (!roleId?.trim()) {
-      throw new InvalidSchoolMembershipException('Role ID is required');
+  // Returns false when the member already holds that role.
+  changeRole(role: SchoolRole): boolean {
+    if (!Object.values(SchoolRole).includes(role)) {
+      throw new InvalidSchoolMembershipException('Invalid school role');
     }
-    if (this.hasRole(roleId)) {
+    if (this.props.status === MembershipStatus.REVOKED) {
+      throw new InvalidSchoolMembershipException('Cannot change the role of a revoked membership');
+    }
+    if (this.props.role === role) {
       return false;
     }
-    this.props.roleIds.push(roleId.trim());
+    this.props.role = role;
     return true;
-  }
-
-  removeRole(roleId: string): boolean {
-    this.assertRolesEditable();
-    const index = this.props.roleIds.indexOf(roleId);
-    if (index === -1) {
-      return false;
-    }
-    if (this.props.roleIds.length === 1) {
-      throw new InvalidSchoolMembershipException('A membership must keep at least one role');
-    }
-    this.props.roleIds.splice(index, 1);
-    return true;
-  }
-
-  private assertRolesEditable(): void {
-    if (this.props.status !== MembershipStatus.ACTIVE) {
-      throw new InvalidSchoolMembershipException('Roles can only be managed on an active membership');
-    }
   }
 
   revoke(revokedBy: string): void {

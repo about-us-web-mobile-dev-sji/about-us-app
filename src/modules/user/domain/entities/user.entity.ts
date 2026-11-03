@@ -12,6 +12,7 @@ interface UserProps {
   email: string;
   status: UserStatus;
   globalRole: GlobalRole;
+  avatarUrl: string | null;
 }
 
 export class User {
@@ -33,6 +34,7 @@ export class User {
     firstName?: string | null;
     lastName?: string | null;
     email: string;
+    avatarUrl?: string | null;
   }): User {
     return new User({
       id: undefined,
@@ -41,6 +43,7 @@ export class User {
       email: input.email,
       status: UserStatus.ACTIVE,
       globalRole: GlobalRole.USER,
+      avatarUrl: input.avatarUrl?.trim() || null,
     });
   }
 
@@ -56,13 +59,19 @@ export class User {
 
   get globalRole(): GlobalRole {return this.props.globalRole;}
 
-  static reconstitute(props: Required<UserProps>): User {return new User(structuredClone(props));}
+  static reconstitute(props: Required<Omit<UserProps, 'avatarUrl'>> & { avatarUrl?: string | null }): User {
+    return new User(structuredClone({ ...props, avatarUrl: props.avatarUrl ?? null }));
+  }
 
   get id(): UUID | undefined {return this.idValue?.value;}
   get firstName(): string | null {return this.props.firstName;}
   get lastName(): string | null {return this.props.lastName;}
   get email(): string {return this.emailValue.value;}
   get status(): UserStatus {return this.props.status;}
+  get avatarUrl(): string | null {return this.props.avatarUrl;}
+  get fullName(): string | null {
+    return [this.props.firstName, this.props.lastName].filter((part) => part?.trim()).join(' ').trim() || null;
+  }
 
   block(): void {
     if (this.props.status === UserStatus.SUSPENDED) return;

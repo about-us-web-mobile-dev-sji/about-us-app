@@ -5,12 +5,16 @@ import { verifyWebOrigin } from './auth-transport.js';
 
 const ACCESS_COOKIE = 'access_token';
 const REFRESH_COOKIE = 'refresh_token';
-const REFRESH_PATH = '/auth/web';
 
 /** Single owner of the web session cookies (names, paths, flags, lifetimes). */
 @Injectable()
 export class WebSessionCookies {
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {}
+
+  /** As seen by the browser, so the cookie is also sent through a proxy prefix. */
+  private get refreshPath(): string {
+    return `${this.config.get<string>('auth.publicPathPrefix') ?? ''}/auth/web`;
+  }
 
   private options(path: string) {
     return {
@@ -30,14 +34,14 @@ export class WebSessionCookies {
       maxAge: tokens.expiresIn * 1000,
     });
     res.cookie(REFRESH_COOKIE, tokens.refreshToken, {
-      ...this.options(REFRESH_PATH),
+      ...this.options(this.refreshPath),
       maxAge: this.config.getOrThrow<number>('auth.sessionTtlSeconds') * 1000,
     });
   }
 
   clear(res: Response): void {
     res.clearCookie(ACCESS_COOKIE, this.options('/'));
-    res.clearCookie(REFRESH_COOKIE, this.options(REFRESH_PATH));
+    res.clearCookie(REFRESH_COOKIE, this.options(this.refreshPath));
   }
 
   hasAccessToken(req: Request): boolean {

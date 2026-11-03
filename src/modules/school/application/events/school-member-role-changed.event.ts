@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { SchoolRole } from '../../domain/enums/school-role.enum.js';
 
 export type SchoolMemberRoleChange = 'ASSIGNED' | 'REMOVED';
 
@@ -11,8 +12,7 @@ export class SchoolMemberRoleChangedEvent {
     public readonly schoolId: string,
     public readonly schoolName: string,
     public readonly memberUserId: string,
-    public readonly roleId: string,
-    public readonly roleName: string,
+    public readonly role: SchoolRole,
     public readonly change: SchoolMemberRoleChange,
     public readonly changedBy: string,
     recipientIds?: string[],

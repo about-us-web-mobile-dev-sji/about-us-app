@@ -3,79 +3,25 @@ import { SchoolInvitation } from '../../domain/entities/school-invitation.entity
 import { InvitationStatus } from '../../domain/enums/invitation-status.enum.js';
 import type { SchoolInvitationRepository } from '../../domain/repositories/i-school-invitation.repository.js';
 import { SchoolMembership } from '../../domain/entities/school-membership.entity.js';
-import { SchoolRole } from '../../domain/entities/school-role.entity.js';
 import { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
-import { SchoolAction } from '../../domain/enums/school-action.enum.js';
-import { SchoolRoleKey } from '../../domain/enums/school-role-key.enum.js';
+import { SchoolRole } from '../../domain/enums/school-role.enum.js';
 import { SchoolStatus } from '../../domain/enums/school-status.enum.js';
-import { DEFAULT_SCHOOL_ROLES } from '../../domain/policies/default-school-roles.js';
 import type { SchoolMembershipRepository } from '../../domain/repositories/i-school-membership.repository.js';
-import type { SchoolRoleRepository } from '../../domain/repositories/i-school-role.repository.js';
 import type { SchoolRepository } from '../../domain/repositories/i-school.repository.js';
 import { SchoolAuthorizationService } from '../services/school-authorization.service.js';
 
 export const SCHOOL_ID = '11111111-1111-4111-8111-111111111111';
 
-export const ROLE = {
-  admin: 'role-admin',
-  contentManager: 'role-content-manager',
-  staff: 'role-staff',
-  technician: 'role-technician',
-  student: 'role-student',
-} as const;
-
-const SYSTEM_IDS: Record<SchoolRoleKey, string> = {
-  [SchoolRoleKey.SCHOOL_ADMIN]: ROLE.admin,
-  [SchoolRoleKey.CONTENT_MANAGER]: ROLE.contentManager,
-  [SchoolRoleKey.STAFF]: ROLE.staff,
-  [SchoolRoleKey.FIELD_TECHNICIAN]: ROLE.technician,
-  [SchoolRoleKey.STUDENT]: ROLE.student,
-};
-
-// The three system roles of SCHOOL_ID with their default permissions.
-export const defaultRoles = (schoolId = SCHOOL_ID): SchoolRole[] =>
-  DEFAULT_SCHOOL_ROLES.map((definition) =>
-    SchoolRole.reconstitute({
-      id: SYSTEM_IDS[definition.key],
-      schoolId,
-      key: definition.key,
-      name: definition.name,
-      description: definition.description,
-      permissions: [...definition.permissions],
-      isSystem: true,
-      createdAt: new Date(2026, 0, 1),
-      updatedAt: new Date(2026, 0, 1),
-    }),
-  );
-
-export const customRole = (
-  id: string,
-  name: string,
-  permissions: SchoolAction[] = [],
-  schoolId = SCHOOL_ID,
-): SchoolRole =>
-  SchoolRole.reconstitute({
-    id,
-    schoolId,
-    key: null,
-    name,
-    description: null,
-    permissions,
-    isSystem: false,
-    createdAt: new Date(2026, 0, 1),
-    updatedAt: new Date(2026, 0, 1),
-  });
-
 export const membershipOf = (
   userId: string,
-  roleIds: string[] = [ROLE.student],
+  role: SchoolRole = SchoolRole.MEMBER,
   status: MembershipStatus = MembershipStatus.ACTIVE,
 ): SchoolMembership =>
   SchoolMembership.reconstitute({
     id: `m-${userId}`,
     schoolId: SCHOOL_ID,
     userId,
-    roleIds,
+    role,
     status,
     grantedBy: 'root',
     grantedAt: new Date(2026, 0, 1),
@@ -91,10 +37,9 @@ export const inMemoryMemberships = (initial: SchoolMembership[]) => {
     findBySchoolAndUser: async (sId: string, uId: string) =>
       stored.find((m) => m.schoolId === sId && m.userId === uId) ?? null,
     findBySchool: async (sId: string) => stored.filter((m) => m.schoolId === sId),
-    findByRole: async (roleId: string) => stored.filter((m) => m.hasRole(roleId)),
     findBySchoolPaginated: async (
       sId: string,
-      filters: { statuses: readonly MembershipStatus[]; roleId?: string },
+      filters: { statuses: readonly MembershipStatus[]; role?: SchoolRole },
       pagination: { page: number; limit: number },
     ) => {
       const matching = stored
@@ -102,7 +47,7 @@ export const inMemoryMemberships = (initial: SchoolMembership[]) => {
           (m) =>
             m.schoolId === sId &&
             filters.statuses.includes(m.status) &&
-            (!filters.roleId || m.hasRole(filters.roleId)),
+            (!filters.role || m.role === filters.role),
         )
         .sort((a, b) => a.grantedAt.getTime() - b.grantedAt.getTime());
       const start = (pagination.page - 1) * pagination.limit;
@@ -133,39 +78,6 @@ export const inMemoryMemberships = (initial: SchoolMembership[]) => {
   };
 };
 
-export const inMemoryRoles = (initial: SchoolRole[] = defaultRoles()) => {
-  let stored = [...initial];
-  let nextId = 1;
-  const repo: SchoolRoleRepository = {
-    ensurePermissionCatalogue: async () => {},
-    findById: async (id) => stored.find((r) => r.id === id) ?? null,
-    findByIds: async (ids) => stored.filter((r) => ids.includes(r.id)),
-    findBySchool: async (sId) => stored.filter((r) => r.schoolId === sId),
-    findByKey: async (sId, key) =>
-      stored.find((r) => r.schoolId === sId && r.key === key) ?? null,
-    existsByName: async (sId, name, excludeId) =>
-      stored.some(
-        (r) =>
-          r.schoolId === sId &&
-          r.id !== excludeId &&
-          r.name.toLowerCase() === name.trim().toLowerCase(),
-      ),
-    save: async (role) => {
-      const saved = role.id
-        ? role
-        : SchoolRole.reconstitute({ ...role.toPrimitives(), id: `new-role-${nextId++}` });
-      stored = stored.some((x) => x.id === saved.id)
-        ? stored.map((x) => (x.id === saved.id ? saved : x))
-        : [...stored, saved];
-      return saved;
-    },
-    delete: async (id) => {
-      stored = stored.filter((r) => r.id !== id);
-    },
-  };
-  return { repo, all: () => stored };
-};
-
 export const schoolsRepo = (status: SchoolStatus = SchoolStatus.ACTIVE, found = true) =>
   ({
     findById: async () =>
@@ -174,23 +86,20 @@ export const schoolsRepo = (status: SchoolStatus = SchoolStatus.ACTIVE, found = 
 
 export const authorizationFor = (
   memberships: SchoolMembershipRepository,
-  roles: SchoolRoleRepository,
   schools: SchoolRepository,
-) => new SchoolAuthorizationService(memberships, roles, schools);
+) => new SchoolAuthorizationService(memberships, schools);
 
-// Ready-made world: roles + memberships + authorization over an ACTIVE school.
+// Ready-made world: memberships + authorization over an ACTIVE school.
 export const world = (
   members: SchoolMembership[],
-  options: { roles?: SchoolRole[]; schoolStatus?: SchoolStatus } = {},
+  options: { schoolStatus?: SchoolStatus } = {},
 ) => {
   const memberships = inMemoryMemberships(members);
-  const roles = inMemoryRoles(options.roles);
   const schools = schoolsRepo(options.schoolStatus);
   return {
     memberships,
-    roles,
     schools,
-    authorization: authorizationFor(memberships.repo, roles.repo, schools),
+    authorization: authorizationFor(memberships.repo, schools),
   };
 };
 
@@ -210,6 +119,21 @@ export const inMemoryInvitations = (initial: SchoolInvitation[] = []) => {
   let nextId = 1;
   const repo: SchoolInvitationRepository = {
     findByTokenHash: async () => null,
+    findById: async (id) => stored.find((i) => i.id === id) ?? null,
+    findBySchoolPaginated: async (sId, filters, { page, limit }, now = new Date()) => {
+      const matching = stored
+        .filter((i) => i.schoolId === sId)
+        .filter((i) => !filters.status || i.trackedStatus(now) === filters.status)
+        .filter((i) => !filters.search || i.email.includes(filters.search.toLowerCase()))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return {
+        items: matching.slice((page - 1) * limit, page * limit),
+        total: matching.length,
+        page,
+        limit,
+        totalPages: Math.ceil(matching.length / limit),
+      };
+    },
     hasPendingForEmail: async (email) =>
       stored.some(
         (i) => i.email === email && i.status === InvitationStatus.PENDING && !i.isExpired(),
@@ -234,14 +158,14 @@ export const inMemoryInvitations = (initial: SchoolInvitation[] = []) => {
 export const pendingInvitation = (
   id: string,
   email: string,
-  roleId: string = ROLE.student,
+  role: SchoolRole = SchoolRole.MEMBER,
   overrides: Partial<ReturnType<SchoolInvitation['toPrimitives']>> = {},
 ): SchoolInvitation =>
   SchoolInvitation.reconstitute({
     id,
     schoolId: SCHOOL_ID,
     email,
-    roleId,
+    role,
     tokenHash: `hash-${id}`,
     status: InvitationStatus.PENDING,
     expiresAt: new Date(Date.now() + 3 * 24 * 3600 * 1000),

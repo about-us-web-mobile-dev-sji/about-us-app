@@ -10,6 +10,8 @@ import { SchoolResponseDto } from '../dto/responses/school-response.dto.js';
 import { SchoolResponse } from '../dto/responses/school.response.js';
 import { UpdateSchoolUseCase } from '../../../application/use-cases/commands/update-school/update-school.js';
 import { UpdateSchoolDto } from '../dto/update-school.dto.js';
+import { UserDirectory } from '../../../../user/application/user-directory.js';
+
 
 @Controller('schools')
 @UseGuards(AuthGuard, RolesGuard)
@@ -19,10 +21,11 @@ export class SchoolController {
     private readonly createSchool: CreateSchoolUseCase,
     private readonly listSchools: ListSchoolsUseCase,
     private readonly updateSchool: UpdateSchoolUseCase,
+    private readonly directory: UserDirectory,
   ) {}
 
   @Get()
-  async findAll(@Req() req: AuthenticatedRequest): Promise<SchoolResponseDto[]> {
+  async findAll(@Req() req: AuthenticatedRequest): Promise<SchoolResponse[]> {
     const userId = req.auth.subjectId;
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
@@ -32,7 +35,8 @@ export class SchoolController {
       userId,
       globalRole: req.auth.user.globalRole,
     });
-    return SchoolResponseDto.fromOutput(output);
+    const users = await this.directory.summaries(output.schools.map((school) => school.createdBy));
+    return SchoolResponseDto.fromOutput(output, users);
   }
 
   @Post()
@@ -49,9 +53,10 @@ export class SchoolController {
       phoneNumber: dto.phoneNumber,
       email: dto.email,
       website: dto.website,
+      logo: dto.logo,
       createdBy: userId,
     });
-    return SchoolResponse.fromOutput(school);
+    return SchoolResponse.fromOutput(school, await this.directory.summaries([school.createdBy]));
   }
 
   @Patch(':id')
@@ -63,7 +68,8 @@ export class SchoolController {
       phoneNumber: dto.phoneNumber,
       email: dto.email,
       website: dto.website,
+      logo: dto.logo,
     });
-    return SchoolResponse.fromOutput(output.school);
+    return SchoolResponse.fromOutput(output.school, await this.directory.summaries([output.school.createdBy]));
   }
 }

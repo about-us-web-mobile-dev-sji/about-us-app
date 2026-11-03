@@ -1,22 +1,13 @@
-import type { SchoolMembershipOutput, SchoolRoleSummary } from '../../school.output.js';
+import type { SchoolMembershipOutput } from '../../school.output.js';
+import type { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import type { PaginatedResult } from '../../../../../../shared/domain/pagination.js';
 
-// VIEW_MEMBERS only: name and roles of ACTIVE members, no email or status.
+// A member's view: who the ACTIVE members are and their role, no status.
 export interface SchoolMemberReducedOutput {
   userId: string;
-  firstName: string | null;
-  lastName: string | null;
-  roles: SchoolRoleSummary[];
-}
-
-// VIEW_MEMBER_DETAILS: every membership with its roles and profile.
-export interface SchoolMemberFullOutput extends SchoolMembershipOutput {
-  roles: SchoolRoleSummary[];
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
+  role: SchoolRole;
 }
 
 export type ListSchoolMembersOutput =
-  | ({ view: 'full' } & PaginatedResult<SchoolMemberFullOutput>)
+  | ({ view: 'full' } & PaginatedResult<SchoolMembershipOutput>)
   | ({ view: 'reduced' } & PaginatedResult<SchoolMemberReducedOutput>);

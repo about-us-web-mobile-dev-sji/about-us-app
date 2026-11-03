@@ -24,7 +24,7 @@ import {
   type GoogleCallbackRequest,
 } from '../../services/google-auth-guard.services.js';
 import { DomainException } from '../../../../../shared/domain/exceptions/domain.exception.js';
-import { takeReturnUrl } from '../google-return-url.js';
+import { googleCallbackPath, takeReturnUrl } from '../google-return-url.js';
 import { EmailLoginDto } from '../dto/email-login.dto.js';
 import { toWebSessionResponse } from '../mappers/auth-response.mapper.js';
 import { accessToken } from '../auth-transport.js';
@@ -72,7 +72,7 @@ export class WebAuthController {
   @Header('Referrer-Policy', 'no-referrer')
   async callback(@Req() req: GoogleCallbackRequest, @Res() res: Response) {
     const target = new URL(this.config.getOrThrow<string>('auth.webCallbackUrl'));
-    const returnUrl = takeReturnUrl(req, res);
+    const returnUrl = takeReturnUrl(req, res, googleCallbackPath(this.config));
     try {
       if (req.googleAuthErrorCode) {
         target.searchParams.set('error', req.googleAuthErrorCode);

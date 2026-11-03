@@ -4,4 +4,5 @@ export interface UpdateSchoolInput {
   phoneNumber?: string | null;
   email?: string | null;
   website?: string | null;
+  logo?: string | null;
 }

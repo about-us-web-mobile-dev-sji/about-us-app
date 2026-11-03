@@ -1,4 +1,4 @@
-import { Repository, QueryFailedError } from 'typeorm';
+import { In, Repository, QueryFailedError } from 'typeorm';
 import { UserEntity } from './../entity/user.entity.js';
 import { User } from '../../../domain/entities/user.entity.js';
 import { GlobalRole } from '../../../domain/enum/global-role.enum.js';
@@ -22,6 +22,12 @@ export class TypeormUserRepository implements UserRepository {
     return this.read(await this.repo.findOneBy({ id }));
   }
   
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    const rows = await this.repo.findBy({ id: In(ids) });
+    return rows.map((row) => UserMapper.toDomain(row));
+  }
+
   async findByEmail(email: string) {
     return this.read(
       await this.repo.findOneBy({ email: Email.create(email).value }),

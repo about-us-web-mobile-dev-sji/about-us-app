@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { SchoolMembership } from './school-membership.entity.js';
 import { MembershipStatus } from '../enums/membership-status.enum.js';
+import { SchoolRole } from '../enums/school-role.enum.js';
 import { InvalidSchoolMembershipException } from '../exceptions/invalid-school-membership.exception.js';
 
-const make = (roleIds: string[], status = MembershipStatus.ACTIVE) =>
+const make = (role = SchoolRole.MEMBER, status = MembershipStatus.ACTIVE) =>
   SchoolMembership.reconstitute({
     id: 'm-1',
     schoolId: 's-1',
     userId: 'u-1',
-    roleIds,
+    role,
     status,
     grantedBy: 'root',
     grantedAt: new Date(),
@@ -17,49 +18,43 @@ const make = (roleIds: string[], status = MembershipStatus.ACTIVE) =>
   });
 
 describe('SchoolMembership.create', () => {
-  it('requires at least one role and removes duplicates', () => {
+  it('makes a member by default', () => {
+    const m = SchoolMembership.create({ schoolId: 's', userId: 'u', grantedBy: 'g' });
+    expect(m.role).toBe(SchoolRole.MEMBER);
+    expect(m.isAdmin).toBe(false);
+    expect(m.status).toBe(MembershipStatus.ACTIVE);
+  });
+
+  it('can make an administrator', () => {
+    const m = SchoolMembership.create({ schoolId: 's', userId: 'u', role: SchoolRole.ADMIN, grantedBy: 'g' });
+    expect(m.isAdmin).toBe(true);
+  });
+
+  it('refuses an unknown role', () => {
     expect(() =>
-      SchoolMembership.create({ schoolId: 's', userId: 'u', roleIds: [], grantedBy: 'g' }),
+      SchoolMembership.create({ schoolId: 's', userId: 'u', role: 'TEACHER' as SchoolRole, grantedBy: 'g' }),
     ).toThrow(InvalidSchoolMembershipException);
-    const m = SchoolMembership.create({
-      schoolId: 's',
-      userId: 'u',
-      roleIds: ['r1', 'r1', 'r2'],
-      grantedBy: 'g',
-    });
-    expect(m.roleIds).toEqual(['r1', 'r2']);
   });
 });
 
-describe('SchoolMembership roles', () => {
-  it('assigns a role, idempotently', () => {
-    const m = make(['r1']);
-    expect(m.assignRole('r2')).toBe(true);
-    expect(m.assignRole('r2')).toBe(false);
-    expect(m.roleIds).toEqual(['r1', 'r2']);
-  });
-
-  it('removes a role, idempotently', () => {
-    const m = make(['r1', 'r2']);
-    expect(m.removeRole('r2')).toBe(true);
-    expect(m.removeRole('r2')).toBe(false);
-    expect(m.roleIds).toEqual(['r1']);
-  });
-
-  it('never removes the last role', () => {
-    expect(() => make(['r1']).removeRole('r1')).toThrow(InvalidSchoolMembershipException);
+describe('SchoolMembership role', () => {
+  it('changes the role, idempotently', () => {
+    const m = make();
+    expect(m.changeRole(SchoolRole.ADMIN)).toBe(true);
+    expect(m.changeRole(SchoolRole.ADMIN)).toBe(false);
+    expect(m.role).toBe(SchoolRole.ADMIN);
   });
 
   it('refuses any role change on a revoked membership', () => {
-    const m = make(['r1'], MembershipStatus.REVOKED);
-    expect(() => m.assignRole('r2')).toThrow(InvalidSchoolMembershipException);
-    expect(() => m.removeRole('r1')).toThrow(InvalidSchoolMembershipException);
+    expect(() => make(SchoolRole.MEMBER, MembershipStatus.REVOKED).changeRole(SchoolRole.ADMIN)).toThrow(
+      InvalidSchoolMembershipException,
+    );
   });
 });
 
 describe('SchoolMembership status', () => {
   it('suspends then restores', () => {
-    const m = make(['r1']);
+    const m = make();
     m.suspend();
     expect(m.status).toBe(MembershipStatus.SUSPENDED);
     m.cancelSuspension();
@@ -67,7 +62,7 @@ describe('SchoolMembership status', () => {
   });
 
   it('refuses to suspend a revoked membership', () => {
-    expect(() => make(['r1'], MembershipStatus.REVOKED).suspend()).toThrow(
+    expect(() => make(SchoolRole.MEMBER, MembershipStatus.REVOKED).suspend()).toThrow(
       InvalidSchoolMembershipException,
     );
   });

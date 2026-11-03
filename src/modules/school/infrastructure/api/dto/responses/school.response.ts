@@ -1,16 +1,5 @@
 import type { SchoolOutput } from '../../../../application/use-cases/school.output.js';
-
-interface SchoolFields {
-  id: string;
-  name: string;
-  phoneNumber: string | null;
-  email: string | null;
-  website: string | null;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
-}
+import { summaryOf, type UserSummaries, type UserSummary } from '../../../../../user/application/user-directory.js';
 
 export class SchoolResponse {
   id!: string;
@@ -18,26 +7,24 @@ export class SchoolResponse {
   phoneNumber!: string | null;
   email!: string | null;
   website!: string | null;
+  logo!: string | null;
   status!: string;
   createdAt!: Date;
   updatedAt!: Date;
-  createdBy!: string;
+  createdBy!: UserSummary;
 
-  private static fromFields(p: SchoolFields): SchoolResponse {
+  static fromOutput(output: SchoolOutput, users: UserSummaries): SchoolResponse {
     return {
-      id: p.id,
-      name: p.name,
-      phoneNumber: p.phoneNumber,
-      email: p.email,
-      website: p.website,
-      status: p.status,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-      createdBy: p.createdBy,
+      id: output.id,
+      name: output.name,
+      phoneNumber: output.phoneNumber,
+      email: output.email,
+      website: output.website,
+      logo: output.logo,
+      status: output.status,
+      createdAt: output.createdAt,
+      updatedAt: output.updatedAt,
+      createdBy: summaryOf(users, output.createdBy),
     };
-  }
-
-  static fromOutput(output: SchoolOutput): SchoolResponse {
-    return SchoolResponse.fromFields(output);
   }
 }

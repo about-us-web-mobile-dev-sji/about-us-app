@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { InvitationStatus } from '../enums/invitation-status.enum.js';
+import { SchoolRole } from '../enums/school-role.enum.js';
 import { SchoolInvitationInvalidException } from '../exceptions/school-invitation-invalid.exception.js';
 
 export const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -8,7 +9,7 @@ export interface SchoolInvitationProps {
   id: string;
   schoolId: string;
   email: string;
-  roleId: string;
+  role: SchoolRole;
   tokenHash: string;
   status: InvitationStatus;
   expiresAt: Date;
@@ -33,7 +34,7 @@ export class SchoolInvitation {
     input: {
       schoolId: string;
       email: string;
-      roleId: string;
+      role?: SchoolRole;
       invitedBy: string;
       ttlMs?: number;
     },
@@ -48,8 +49,9 @@ export class SchoolInvitation {
     if (!input.invitedBy?.trim()) {
       throw new SchoolInvitationInvalidException('InvitedBy is required');
     }
-    if (!input.roleId?.trim()) {
-      throw new SchoolInvitationInvalidException('Role ID is required');
+    const role = input.role ?? SchoolRole.MEMBER;
+    if (!Object.values(SchoolRole).includes(role)) {
+      throw new SchoolInvitationInvalidException('Invalid school role');
     }
 
     const token = randomBytes(32).toString('hex');
@@ -58,7 +60,7 @@ export class SchoolInvitation {
       id: '',
       schoolId: input.schoolId.trim(),
       email: input.email.trim().toLowerCase(),
-      roleId: input.roleId,
+      role,
       tokenHash: SchoolInvitation.hashToken(token),
       status: InvitationStatus.PENDING,
       expiresAt: new Date(now.getTime() + (input.ttlMs ?? INVITATION_TTL_MS)),
@@ -87,8 +89,8 @@ export class SchoolInvitation {
     return this.props.email;
   }
 
-  get roleId(): string {
-    return this.props.roleId;
+  get role(): SchoolRole {
+    return this.props.role;
   }
 
   get status(): InvitationStatus {
@@ -101,6 +103,17 @@ export class SchoolInvitation {
 
   get expiresAt(): Date {
     return this.props.expiresAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  /** PENDING, ACCEPTED, CANCELLED, or EXPIRED for a pending one past its expiry. */
+  trackedStatus(now: Date = new Date()): InvitationStatus | 'EXPIRED' {
+    return this.props.status === InvitationStatus.PENDING && this.isExpired(now)
+      ? 'EXPIRED'
+      : this.props.status;
   }
 
   isExpired(now: Date = new Date()): boolean {
