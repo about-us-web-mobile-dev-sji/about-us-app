@@ -12,6 +12,8 @@ import { UpdateSchoolUseCase } from '../../../application/use-cases/commands/upd
 import { SchoolResponse } from '../dto/responses/school.response.js';
 import { SchoolStatus } from '../../../domain/enums/school-status.enum.js';
 import type { UUID } from 'crypto';
+import { UserDirectory } from '../../../../user/application/user-directory.js';
+
 
 @Controller('schools')
 @UseGuards(AuthGuard, RolesGuard)
@@ -20,6 +22,7 @@ export class SchoolAdministrationController {
     private readonly replaceAdmin: ReplaceSchoolAdministratorUseCase,
     private readonly toggleStatus: ToggleSchoolStatus,
     private readonly updateSchool: UpdateSchoolUseCase,
+    private readonly directory: UserDirectory,
   ) {}
 
   @Patch(':schoolId')
@@ -29,7 +32,7 @@ export class SchoolAdministrationController {
     @Body() dto: UpdateSchoolDto,
   ) {
     const output = await this.updateSchool.handle({ schoolId, ...dto });
-    return SchoolResponse.fromOutput(output.school);
+    return SchoolResponse.fromOutput(output.school, await this.directory.summaries([output.school.createdBy]));
   }
 
   @Patch(':schoolId/administrator')
@@ -49,14 +52,15 @@ export class SchoolAdministrationController {
       newAdminUserId: dto.newAdminUserId,
       performedBy: userId,
     });
-    return ReplaceAdministratorResponse.fromOutput(output);
+    const users = await this.directory.summaries([output.previousAdminUserId, output.newAdminUserId]);
+    return ReplaceAdministratorResponse.fromOutput(output, users);
   }
 
   @Patch(':id/toggle-block')
   @Roles(GlobalRole.SUPER_ADMIN)
   async toggleBlock(@Param('id') id: string) {
     const output = await this.toggleStatus.handle({ schoolId: id });
-    return SchoolResponse.fromOutput(output.school);
+    return SchoolResponse.fromOutput(output.school, await this.directory.summaries([output.school.createdBy]));
   }
 
   @Patch(':id/disable')
@@ -66,6 +70,6 @@ export class SchoolAdministrationController {
       schoolId: id,
       status: SchoolStatus.BLOCKED,
     });
-    return SchoolResponse.fromOutput(output.school);
+    return SchoolResponse.fromOutput(output.school, await this.directory.summaries([output.school.createdBy]));
   }
 }

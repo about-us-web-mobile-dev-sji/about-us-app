@@ -1,8 +1,10 @@
 import type { School } from '../../domain/entities/school.entity.js';
+import type { SchoolInvitation } from '../../domain/entities/school-invitation.entity.js';
+import type { TrackedInvitationStatus } from '../../domain/repositories/i-school-invitation.repository.js';
 import type { SchoolMembership } from '../../domain/entities/school-membership.entity.js';
 import type { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
 import type { SchoolStatus } from '../../domain/enums/school-status.enum.js';
-import type { SchoolRole } from '../../domain/entities/school-role.entity.js';
+import type { SchoolRole } from '../../domain/enums/school-role.enum.js';
 
 export interface SchoolOutput {
   id: string;
@@ -10,6 +12,7 @@ export interface SchoolOutput {
   phoneNumber: string | null;
   email: string | null;
   website: string | null;
+  logo: string | null;
   status: SchoolStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -25,29 +28,7 @@ export interface SchoolMembershipOutput {
   grantedAt: Date;
   revokedAt: Date | null;
   revokedBy: string | null;
-  roleIds: string[];
-}
-
-export interface SchoolRoleOutput {
-  id: string;
-  schoolId: string;
-  key: string | null;
-  name: string;
-  description: string | null;
-  permissions: string[];
-  isSystem: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface SchoolRoleSummary {
-  id: string;
-  key: string | null;
-  name: string;
-}
-
-export function toSchoolRoleSummary(role: SchoolRole): SchoolRoleSummary {
-  return { id: role.id, key: role.key, name: role.name };
+  role: SchoolRole;
 }
 
 export function toSchoolOutput(school: School): SchoolOutput {
@@ -58,20 +39,38 @@ export function toSchoolOutput(school: School): SchoolOutput {
 export function toSchoolMembershipOutput(
   membership: SchoolMembership,
 ): SchoolMembershipOutput {
-  const primitives = membership.toPrimitives();
-  return { ...primitives, roleIds: [...membership.roleIds] };
+  return membership.toPrimitives();
 }
 
-export function toSchoolRoleOutput(role: SchoolRole): SchoolRoleOutput {
-  return {
-    id: role.id,
-    schoolId: role.schoolId,
-    key: role.key,
-    name: role.name,
-    description: role.description,
-    permissions: [...role.permissions],
-    isSystem: role.isSystem,
-    createdAt: role.toPrimitives().createdAt,
-    updatedAt: role.toPrimitives().updatedAt,
-  };
+// An invitation as followed by the school administrator; never carries the token.
+export interface SchoolInvitationOutput {
+  id: string;
+  schoolId: string;
+  email: string;
+  role: SchoolRole;
+  status: TrackedInvitationStatus;
+  expiresAt: Date;
+  createdAt: Date;
+  invitedBy: string;
+  acceptedAt: Date | null;
+  acceptedBy: string | null;
 }
+
+export const toSchoolInvitationOutput = (
+  invitation: SchoolInvitation,
+  now: Date = new Date(),
+): SchoolInvitationOutput => {
+  const p = invitation.toPrimitives();
+  return {
+    id: p.id,
+    schoolId: p.schoolId,
+    email: p.email,
+    role: p.role,
+    status: invitation.trackedStatus(now),
+    expiresAt: p.expiresAt,
+    createdAt: p.createdAt,
+    invitedBy: p.invitedBy,
+    acceptedAt: p.acceptedAt,
+    acceptedBy: p.acceptedBy,
+  };
+};

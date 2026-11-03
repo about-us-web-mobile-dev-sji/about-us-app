@@ -10,18 +10,12 @@ import UserStatus from '../../../user/domain/enum/user-status.enum.js';
 import { SchoolEntity } from './typeorm/school.entity.js';
 import { SchoolMembershipEntity } from './typeorm/school-membership.entity.js';
 import { SchoolInvitationEntity } from './typeorm/school-invitation.entity.js';
-import { SchoolRoleEntity } from './typeorm/school-role.entity.js';
-import { PermissionEntity } from './typeorm/permission.entity.js';
-import { TypeormSchoolRoleRepository } from './typeorm-school-role.repository.js';
 import { TypeormSchoolMembershipRepository } from './typeorm-school-membership.repository.js';
 import { TypeormSchoolInvitationRepository } from './typeorm-school-invitation.repository.js';
 import { SchoolMembership } from '../../domain/entities/school-membership.entity.js';
 import { SchoolInvitation } from '../../domain/entities/school-invitation.entity.js';
-import { SchoolRole } from '../../domain/entities/school-role.entity.js';
 import { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
-import { SchoolAction } from '../../domain/enums/school-action.enum.js';
-import { SchoolRoleKey } from '../../domain/enums/school-role-key.enum.js';
-import { ensureSystemRoles } from '../../application/services/school-role-provisioning.js';
+import { SchoolRole } from '../../domain/enums/school-role.enum.js';
 
 // Needs a PostgreSQL server (same TEST_DATABASE_URL as the user module tests);
 // skipped otherwise. Only the randomly named database created here is dropped.
@@ -35,7 +29,6 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
   const otherSchoolId = randomUUID();
   const ids = { admin: randomUUID(), alice: randomUUID(), bob: randomUUID(), carol: randomUUID() };
 
-  let roles: TypeormSchoolRoleRepository;
   let memberships: TypeormSchoolMembershipRepository;
   let invitations: TypeormSchoolInvitationRepository;
 
@@ -55,7 +48,7 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
       synchronize: false,
       entities: [
         UserEntity, AuthIdentityEntity, AuthSessionEntity,
-        SchoolEntity, SchoolMembershipEntity, SchoolInvitationEntity, SchoolRoleEntity, PermissionEntity,
+        SchoolEntity, SchoolMembershipEntity, SchoolInvitationEntity,
       ],
     });
     await source.initialize();
@@ -64,7 +57,6 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
     }
     await source.synchronize();
 
-    roles = new TypeormSchoolRoleRepository(source.getRepository(SchoolRoleEntity));
     memberships = new TypeormSchoolMembershipRepository(source.getRepository(SchoolMembershipEntity));
     invitations = new TypeormSchoolInvitationRepository(source.getRepository(SchoolInvitationEntity));
 
@@ -88,105 +80,35 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
     }
   });
 
-  describe('roles', () => {
-    it('creates the five system roles once, with their permissions', async () => {
-      const first = await ensureSystemRoles(roles, schoolId);
-      const again = await ensureSystemRoles(roles, schoolId);
-
-      expect(Object.keys(first).sort()).toEqual(Object.values(SchoolRoleKey).sort());
-      expect(again[SchoolRoleKey.STAFF].id).toBe(first[SchoolRoleKey.STAFF].id);
-      expect(first[SchoolRoleKey.SCHOOL_ADMIN].permissions.length).toBe(Object.values(SchoolAction).length);
-      expect([...first[SchoolRoleKey.STAFF].permissions]).toEqual([SchoolAction.VIEW_MEMBERS]);
-      expect([...first[SchoolRoleKey.STUDENT].permissions]).toEqual([]);
-      expect((await roles.findBySchool(schoolId)).length).toBe(5);
-    });
-
-    it('creates a custom role, then changes its permissions', async () => {
-      const created = await roles.save(
-        SchoolRole.createCustom({
-          schoolId,
-          name: 'Surveillant',
-          permissions: [SchoolAction.SUSPEND_MEMBER],
-        }),
-      );
-      expect([...created.permissions]).toEqual([SchoolAction.SUSPEND_MEMBER]);
-
-      created.update({ permissions: [SchoolAction.VIEW_MEMBERS, SchoolAction.INVITE_MEMBER] });
-      await roles.save(created);
-      const reloaded = await roles.findById(created.id);
-      expect([...reloaded!.permissions].sort()).toEqual(
-        [SchoolAction.INVITE_MEMBER, SchoolAction.VIEW_MEMBERS].sort(),
-      );
-      expect(await roles.existsByName(schoolId, 'surveillant')).toBe(true);
-      expect(await roles.existsByName(schoolId, 'surveillant', created.id)).toBe(false);
-      expect(await roles.existsByName(otherSchoolId, 'surveillant')).toBe(false);
-    });
-
-    it('refuses two system roles with the same key in one school', async () => {
-      await expect(
-        source.getRepository(SchoolRoleEntity).insert({
-          schoolId,
-          key: SchoolRoleKey.STAFF,
-          name: 'Doublon',
-          isSystem: true,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('drops permission codes that left the catalogue', async () => {
-      await source.getRepository(PermissionEntity).insert({ code: 'OBSOLETE_PERMISSION', description: null });
-      await roles.ensurePermissionCatalogue();
-      const codes = (await source.getRepository(PermissionEntity).find()).map((p) => p.code);
-      expect(codes).not.toContain('OBSOLETE_PERMISSION');
-      expect(codes.sort()).toEqual(Object.values(SchoolAction).sort());
-    });
-  });
-
   describe('memberships', () => {
-    let adminRoleId: string;
-    let staffRoleId: string;
-    let studentRoleId: string;
-
     beforeAll(async () => {
-      const system = await ensureSystemRoles(roles, schoolId);
-      adminRoleId = system[SchoolRoleKey.SCHOOL_ADMIN].id;
-      staffRoleId = system[SchoolRoleKey.STAFF].id;
-      studentRoleId = system[SchoolRoleKey.STUDENT].id;
-
-      const make = (userId: string, roleIds: string[], grantedAtOffset: number) => {
-        const m = SchoolMembership.create({ schoolId, userId, roleIds, grantedBy: ids.admin });
+      const make = (userId: string, role: SchoolRole, grantedAtOffset: number) => {
+        const m = SchoolMembership.create({ schoolId, userId, role, grantedBy: ids.admin });
         return SchoolMembership.reconstitute({
           ...m.toPrimitives(),
           grantedAt: new Date(Date.now() - grantedAtOffset),
         });
       };
-      await memberships.save(make(ids.carol, [studentRoleId], 5000));
-      await memberships.save(make(ids.bob, [staffRoleId, studentRoleId], 4000));
-      await memberships.save(make(ids.alice, [studentRoleId], 3000));
-      await memberships.save(make(ids.admin, [adminRoleId], 1000)); // newest, but administrator
+      await memberships.save(make(ids.carol, SchoolRole.MEMBER, 5000));
+      await memberships.save(make(ids.bob, SchoolRole.MEMBER, 4000));
+      await memberships.save(make(ids.alice, SchoolRole.MEMBER, 3000));
+      await memberships.save(make(ids.admin, SchoolRole.ADMIN, 1000)); // newest, but administrator
     });
 
-    it('stores and reloads the roles of a membership', async () => {
-      const bob = await memberships.findBySchoolAndUser(schoolId, ids.bob);
-      expect([...bob!.roleIds].sort()).toEqual([staffRoleId, studentRoleId].sort());
+    it('stores and reloads the role of a membership', async () => {
+      expect((await memberships.findBySchoolAndUser(schoolId, ids.bob))!.role).toBe(SchoolRole.MEMBER);
+      expect((await memberships.findBySchoolAndUser(schoolId, ids.admin))!.role).toBe(SchoolRole.ADMIN);
     });
 
-    it('updates the roles of a membership', async () => {
+    it('updates the role of a membership', async () => {
       const alice = (await memberships.findBySchoolAndUser(schoolId, ids.alice))!;
-      alice.assignRole(staffRoleId);
+      alice.changeRole(SchoolRole.ADMIN);
       await memberships.save(alice);
-      expect((await memberships.findBySchoolAndUser(schoolId, ids.alice))!.hasRole(staffRoleId)).toBe(true);
+      expect((await memberships.findBySchoolAndUser(schoolId, ids.alice))!.isAdmin).toBe(true);
       const reloaded = (await memberships.findBySchoolAndUser(schoolId, ids.alice))!;
-      reloaded.removeRole(staffRoleId);
+      reloaded.changeRole(SchoolRole.MEMBER);
       await memberships.save(reloaded);
-      expect((await memberships.findBySchoolAndUser(schoolId, ids.alice))!.roleIds).toEqual([studentRoleId]);
-    });
-
-    it('finds the holders of a role', async () => {
-      const holders = await memberships.findByRole(staffRoleId);
-      expect(holders.map((m) => m.userId)).toEqual([ids.bob]);
+      expect((await memberships.findBySchoolAndUser(schoolId, ids.alice))!.role).toBe(SchoolRole.MEMBER);
     });
 
     const all = [MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED, MembershipStatus.INACTIVE];
@@ -195,7 +117,7 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
       const page = await memberships.findBySchoolPaginated(schoolId, { statuses: all }, { page: 1, limit: 10 });
       expect(page.total).toBe(4);
       expect(page.items.map((m) => m.userId)).toEqual([ids.admin, ids.carol, ids.bob, ids.alice]);
-      expect(page.items[0].roleIds).toEqual([adminRoleId]);
+      expect(page.items[0].role).toBe(SchoolRole.ADMIN);
       expect(page.totalPages).toBe(1);
     });
 
@@ -210,13 +132,12 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
       ]);
     });
 
-    it('filters by role, keeping every role of the members returned', async () => {
+    it('filters by role', async () => {
       const page = await memberships.findBySchoolPaginated(
-        schoolId, { statuses: all, roleId: staffRoleId }, { page: 1, limit: 10 },
+        schoolId, { statuses: all, role: SchoolRole.ADMIN }, { page: 1, limit: 10 },
       );
       expect(page.total).toBe(1);
-      expect(page.items[0].userId).toBe(ids.bob);
-      expect([...page.items[0].roleIds].sort()).toEqual([staffRoleId, studentRoleId].sort());
+      expect(page.items[0].userId).toBe(ids.admin);
     });
 
     it('filters by status', async () => {
@@ -269,13 +190,12 @@ describe.skipIf(!url)('school persistence (PostgreSQL)', () => {
 
   describe('invitations', () => {
     it('stores the invited role', async () => {
-      const staff = (await roles.findByKey(schoolId, SchoolRoleKey.STAFF))!;
       const { invitation, token } = SchoolInvitation.issue({
-        schoolId, email: 'new@ecole.test', roleId: staff.id, invitedBy: ids.admin,
+        schoolId, email: 'new@ecole.test', role: SchoolRole.ADMIN, invitedBy: ids.admin,
       });
       await invitations.save(invitation);
       const found = await invitations.findByTokenHash(SchoolInvitation.hashToken(token));
-      expect(found!.roleId).toBe(staff.id);
+      expect(found!.role).toBe(SchoolRole.ADMIN);
       expect((await invitations.findPendingBySchoolAndEmail(schoolId, 'NEW@ecole.test')).length).toBe(1);
     });
   });

@@ -10,6 +10,7 @@ const id = '00000000-0000-4000-8000-000000000001';
 function setup(existing: User | null = null) {
   const repository = {
     findById: vi.fn(async () => existing),
+    findByIds: vi.fn(async () => []),
     findByEmail: vi.fn(async () => existing),
     findSuperAdmin: vi.fn(async () => null),
     superAdminExists: vi.fn(async () => false),

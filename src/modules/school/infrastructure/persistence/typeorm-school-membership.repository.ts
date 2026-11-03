@@ -4,7 +4,7 @@ import { SchoolMembership } from '../../domain/entities/school-membership.entity
 import type { SchoolMembershipRepository } from '../../domain/repositories/i-school-membership.repository.js';
 import { SchoolMembershipMapper } from './mappers/school-membership.mapper.js';
 import { MembershipStatus } from '../../domain/enums/membership-status.enum.js';
-import { SchoolRoleKey } from '../../domain/enums/school-role-key.enum.js';
+import { SchoolRole } from '../../domain/enums/school-role.enum.js';
 import { UserEntity } from '../../../user/infrastructure/persistence/entity/user.entity.js';
 import type { PaginationParams, PaginatedResult } from '../../../../shared/domain/pagination.js';
 import type { SchoolMembershipFilters } from '../../domain/repositories/i-school-membership.repository.js';
@@ -48,13 +48,8 @@ export class TypeormSchoolMembershipRepository
         statuses: [...filters.statuses],
       });
 
-    if (filters.roleId) {
-      base.innerJoin(
-        'membership.roles',
-        'filteredRole',
-        'filteredRole.id = :roleId',
-        { roleId: filters.roleId },
-      );
+    if (filters.role) {
+      base.andWhere('membership.role = :role', { role: filters.role });
     }
     if (filters.search) {
       const search = `%${filters.search.trim().toLowerCase()}%`;
@@ -78,17 +73,11 @@ export class TypeormSchoolMembershipRepository
       .clone()
       .select('membership.id', 'id')
       .addSelect(
-        `CASE WHEN EXISTS (
-          SELECT 1
-          FROM school.school_membership_roles link
-          INNER JOIN school.school_roles admin_role ON admin_role.id = link.school_role_id
-          WHERE link.membership_id = "membership"."id"
-            AND admin_role.key = :adminRoleKey
-        ) THEN 0 ELSE 1 END`,
+        'CASE WHEN membership.role = :adminRole THEN 0 ELSE 1 END',
         'admin_rank',
       )
       .addSelect('membership.grantedAt', 'granted_at')
-      .setParameter('adminRoleKey', SchoolRoleKey.SCHOOL_ADMIN)
+      .setParameter('adminRole', SchoolRole.ADMIN)
       .orderBy('admin_rank', 'ASC')
       .addOrderBy('granted_at', 'ASC')
       .addOrderBy('membership.id', 'ASC')
@@ -118,14 +107,6 @@ export class TypeormSchoolMembershipRepository
       status: MembershipStatus.ACTIVE,
     });
     return entities.map((e: SchoolMembershipEntity) => SchoolMembershipMapper.toDomain(e));
-  }
-
-  async findByRole(roleId: string): Promise<SchoolMembership[]> {
-    const entities = await this.repo
-      .createQueryBuilder('membership')
-      .innerJoin('membership.roles', 'role', 'role.id = :roleId', { roleId })
-      .getMany();
-    return entities.map((entity) => SchoolMembershipMapper.toDomain(entity));
   }
 
   async save(membership: SchoolMembership): Promise<SchoolMembership> {

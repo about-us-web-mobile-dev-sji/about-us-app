@@ -18,7 +18,8 @@ export class UpdateSchoolUseCase {
       input.name === undefined &&
       input.phoneNumber === undefined &&
       input.email === undefined &&
-      input.website === undefined
+      input.website === undefined &&
+      input.logo === undefined
     ) {
       throw new InvalidSchoolException('At least one school field must be provided');
     }
@@ -41,6 +42,7 @@ export class UpdateSchoolUseCase {
       phoneNumber: input.phoneNumber,
       email: input.email,
       website: input.website,
+      logo: input.logo,
     });
     return { school: toSchoolOutput(await this.schools.save(school)) };
   }

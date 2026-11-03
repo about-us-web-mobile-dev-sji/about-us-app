@@ -11,6 +11,7 @@ export class UserMapper {
       lastName: row.lastName,
       status: row.status,
       globalRole: row.globalRole,
+      avatarUrl: row.avatarUrl ?? null,
     });
   }
   static toPersistence(user: User): UserEntity {
@@ -21,6 +22,7 @@ export class UserMapper {
       lastName: user.lastName,
       status: user.status,
       globalRole: user.globalRole,
+      avatarUrl: user.avatarUrl,
     });
   }
 }

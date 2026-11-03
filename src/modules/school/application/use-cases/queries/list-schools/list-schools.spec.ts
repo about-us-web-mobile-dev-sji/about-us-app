@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import { GlobalRole } from '../../../../../user/domain/enum/global-role.enum.js';
 import { School } from '../../../../domain/entities/school.entity.js';
 import { SchoolMembership } from '../../../../domain/entities/school-membership.entity.js';
@@ -21,6 +22,7 @@ describe('ListSchoolsUseCase', () => {
       phoneNumber: null,
       email: null,
       website: null,
+      logo: null,
       status: SchoolStatus.ACTIVE,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -31,7 +33,7 @@ describe('ListSchoolsUseCase', () => {
       id: `m-${schoolId}`,
       schoolId,
       userId: 'user-1',
-      roleIds: ['role-student'],
+      role: SchoolRole.MEMBER,
       status,
       grantedBy: 'root',
       grantedAt: new Date(),

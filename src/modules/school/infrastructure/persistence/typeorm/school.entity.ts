@@ -20,6 +20,9 @@ export class SchoolEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   website!: string | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  logo!: string | null;
+
   @Column({
     type: 'enum',
     enum: SchoolStatus,

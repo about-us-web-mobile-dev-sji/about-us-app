@@ -9,18 +9,13 @@ import { UserAccountService } from '../user/application/user-account.service.js'
 import { SchoolEntity } from './infrastructure/persistence/typeorm/school.entity.js';
 import { SchoolMembershipEntity } from './infrastructure/persistence/typeorm/school-membership.entity.js';
 import { SchoolInvitationEntity } from './infrastructure/persistence/typeorm/school-invitation.entity.js';
-import { SchoolRoleEntity } from './infrastructure/persistence/typeorm/school-role.entity.js';
-import { PermissionEntity } from './infrastructure/persistence/typeorm/permission.entity.js';
 import { TypeormSchoolRepository } from './infrastructure/persistence/typeorm-school.repository.js';
 import { TypeormSchoolMembershipRepository } from './infrastructure/persistence/typeorm-school-membership.repository.js';
 import { TypeormSchoolInvitationRepository } from './infrastructure/persistence/typeorm-school-invitation.repository.js';
-import { TypeormSchoolRoleRepository } from './infrastructure/persistence/typeorm-school-role.repository.js';
 import { SCHOOL_REPOSITORY, type SchoolRepository } from './domain/repositories/i-school.repository.js';
 import { SCHOOL_MEMBERSHIP_REPOSITORY, type SchoolMembershipRepository } from './domain/repositories/i-school-membership.repository.js';
 import { SCHOOL_INVITATION_REPOSITORY, type SchoolInvitationRepository } from './domain/repositories/i-school-invitation.repository.js';
-import { SCHOOL_ROLE_REPOSITORY, type SchoolRoleRepository } from './domain/repositories/i-school-role.repository.js';
 import { SchoolAuthorizationService } from './application/services/school-authorization.service.js';
-import { SchoolRoleBootstrap } from './application/services/school-role-bootstrap.js';
 import { CreateSchoolUseCase } from './application/use-cases/commands/create-school/create-school.js';
 import { UpdateSchoolUseCase } from './application/use-cases/commands/update-school/update-school.js';
 import { ToggleSchoolStatus } from './application/use-cases/commands/toggle-school-status/toggle-school-status.js';
@@ -30,19 +25,15 @@ import { AcceptSchoolInvitation } from './application/use-cases/commands/accept-
 import { SuspendSchoolMemberUseCase } from './application/use-cases/commands/suspend-school-member/suspend-school-member.js';
 import { CancelSchoolMemberSuspensionUseCase } from './application/use-cases/commands/cancel-school-member-suspension/cancel-school-member-suspension.js';
 import { RevokeSchoolMemberUseCase } from './application/use-cases/commands/revoke-school-member/revoke-school-member.js';
-import { CreateSchoolRoleUseCase } from './application/use-cases/commands/create-school-role/create-school-role.js';
-import { UpdateSchoolRoleUseCase } from './application/use-cases/commands/update-school-role/update-school-role.js';
-import { DeleteSchoolRoleUseCase } from './application/use-cases/commands/delete-school-role/delete-school-role.js';
-import { AssignSchoolMemberRoleUseCase } from './application/use-cases/commands/assign-school-member-role/assign-school-member-role.js';
-import { RemoveSchoolMemberRoleUseCase } from './application/use-cases/commands/remove-school-member-role/remove-school-member-role.js';
+import { ListSchoolInvitationsUseCase } from './application/use-cases/queries/list-school-invitations/list-school-invitations.js';
+import { CancelSchoolInvitationUseCase } from './application/use-cases/commands/cancel-school-invitation/cancel-school-invitation.js';
+import { ResendSchoolInvitationUseCase } from './application/use-cases/commands/resend-school-invitation/resend-school-invitation.js';
 import { ListSchoolsUseCase } from './application/use-cases/queries/list-schools/list-schools.js';
 import { ListSchoolMembersUseCase } from './application/use-cases/queries/list-school-members/list-school-members.js';
-import { ListSchoolRolesUseCase } from './application/use-cases/queries/list-school-roles/list-school-roles.js';
 import { SchoolController } from './infrastructure/api/controllers/school.controller.js';
 import { SchoolAdministrationController } from './infrastructure/api/controllers/school-administration.controller.js';
 import { SchoolInvitationController } from './infrastructure/api/controllers/school-invitation.controller.js';
 import { SchoolMemberController } from './infrastructure/api/controllers/school-member.controller.js';
-import { SchoolRoleController } from './infrastructure/api/controllers/school-role.controller.js';
 import { SpacesModule } from '../spaces/spaces.module.js';
 import { InvitationSignUpPolicy } from './infrastructure/auth/invitation-sign-up-policy.js';
 import {
@@ -57,8 +48,6 @@ import {
       SchoolEntity,
       SchoolMembershipEntity,
       SchoolInvitationEntity,
-      SchoolRoleEntity,
-      PermissionEntity,
     ]),
     UserModule,
     AuthModule,
@@ -69,7 +58,6 @@ import {
     SchoolAdministrationController,
     SchoolInvitationController,
     SchoolMemberController,
-    SchoolRoleController,
   ],
   providers: [
     InvitationSignUpPolicy,
@@ -89,23 +77,10 @@ import {
       inject: [getRepositoryToken(SchoolInvitationEntity)],
     },
     {
-      provide: SCHOOL_ROLE_REPOSITORY,
-      useFactory: (repo: Repository<SchoolRoleEntity>) => new TypeormSchoolRoleRepository(repo),
-      inject: [getRepositoryToken(SchoolRoleEntity)],
-    },
-    {
-      provide: SchoolRoleBootstrap,
-      useFactory: (schools: SchoolRepository, roles: SchoolRoleRepository) => new SchoolRoleBootstrap(schools, roles),
-      inject: [SCHOOL_REPOSITORY, SCHOOL_ROLE_REPOSITORY],
-    },
-    {
       provide: SchoolAuthorizationService,
-      useFactory: (
-        memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
-        schools: SchoolRepository,
-      ) => new SchoolAuthorizationService(memberships, roles, schools),
-      inject: [SCHOOL_MEMBERSHIP_REPOSITORY, SCHOOL_ROLE_REPOSITORY, SCHOOL_REPOSITORY],
+      useFactory: (memberships: SchoolMembershipRepository, schools: SchoolRepository) =>
+        new SchoolAuthorizationService(memberships, schools),
+      inject: [SCHOOL_MEMBERSHIP_REPOSITORY, SCHOOL_REPOSITORY],
     },
 
     {
@@ -113,10 +88,9 @@ import {
       useFactory: (
         schools: SchoolRepository,
         invitations: SchoolInvitationRepository,
-        roles: SchoolRoleRepository,
         eventEmitter: EventEmitter2,
-      ) => new CreateSchoolUseCase(schools, invitations, roles, eventEmitter),
-      inject: [SCHOOL_REPOSITORY, SCHOOL_INVITATION_REPOSITORY, SCHOOL_ROLE_REPOSITORY, EventEmitter2],
+      ) => new CreateSchoolUseCase(schools, invitations, eventEmitter),
+      inject: [SCHOOL_REPOSITORY, SCHOOL_INVITATION_REPOSITORY, EventEmitter2],
     },
     {
       provide: UpdateSchoolUseCase,
@@ -134,17 +108,15 @@ import {
       useFactory: (
         schools: SchoolRepository,
         memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
         users: UserAccountService,
         emitter: EventEmitter2,
       ) =>
-        new ReplaceSchoolAdministratorUseCase(schools, memberships, roles, users, (event) => {
+        new ReplaceSchoolAdministratorUseCase(schools, memberships, users, (event) => {
           emitter.emit('school.member-role.changed', event);
         }),
       inject: [
         SCHOOL_REPOSITORY,
         SCHOOL_MEMBERSHIP_REPOSITORY,
-        SCHOOL_ROLE_REPOSITORY,
         UserAccountService,
         EventEmitter2,
       ],
@@ -163,7 +135,6 @@ import {
         schools: SchoolRepository,
         invitations: SchoolInvitationRepository,
         memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
         users: UserAccountService,
         eventEmitter: EventEmitter2,
         authorization: SchoolAuthorizationService,
@@ -172,7 +143,6 @@ import {
           schools,
           invitations,
           memberships,
-          roles,
           users,
           eventEmitter,
           authorization,
@@ -181,7 +151,6 @@ import {
         SCHOOL_REPOSITORY,
         SCHOOL_INVITATION_REPOSITORY,
         SCHOOL_MEMBERSHIP_REPOSITORY,
-        SCHOOL_ROLE_REPOSITORY,
         UserAccountService,
         EventEmitter2,
         SchoolAuthorizationService,
@@ -193,18 +162,40 @@ import {
         schools: SchoolRepository,
         invitations: SchoolInvitationRepository,
         memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
         users: UserAccountService,
         eventEmitter: EventEmitter2,
-      ) => new AcceptSchoolInvitation(schools, invitations, memberships, roles, users, eventEmitter),
+      ) => new AcceptSchoolInvitation(schools, invitations, memberships, users, eventEmitter),
       inject: [
         SCHOOL_REPOSITORY,
         SCHOOL_INVITATION_REPOSITORY,
         SCHOOL_MEMBERSHIP_REPOSITORY,
-        SCHOOL_ROLE_REPOSITORY,
         UserAccountService,
         EventEmitter2,
       ],
+    },
+    {
+      provide: ListSchoolInvitationsUseCase,
+      useFactory: (
+        schools: SchoolRepository,
+        invitations: SchoolInvitationRepository,
+        authorization: SchoolAuthorizationService,
+      ) => new ListSchoolInvitationsUseCase(schools, invitations, authorization),
+      inject: [SCHOOL_REPOSITORY, SCHOOL_INVITATION_REPOSITORY, SchoolAuthorizationService],
+    },
+    {
+      provide: CancelSchoolInvitationUseCase,
+      useFactory: (invitations: SchoolInvitationRepository, authorization: SchoolAuthorizationService) =>
+        new CancelSchoolInvitationUseCase(invitations, authorization),
+      inject: [SCHOOL_INVITATION_REPOSITORY, SchoolAuthorizationService],
+    },
+    {
+      provide: ResendSchoolInvitationUseCase,
+      useFactory: (
+        invitations: SchoolInvitationRepository,
+        authorization: SchoolAuthorizationService,
+        invite: InviteSchoolMemberUseCase,
+      ) => new ResendSchoolInvitationUseCase(invitations, authorization, invite),
+      inject: [SCHOOL_INVITATION_REPOSITORY, SchoolAuthorizationService, InviteSchoolMemberUseCase],
     },
 
     // --- members
@@ -213,17 +204,9 @@ import {
       useFactory: (
         schools: SchoolRepository,
         memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
         authorization: SchoolAuthorizationService,
-        users: UserAccountService,
-      ) => new ListSchoolMembersUseCase(schools, memberships, roles, authorization, users),
-      inject: [
-        SCHOOL_REPOSITORY,
-        SCHOOL_MEMBERSHIP_REPOSITORY,
-        SCHOOL_ROLE_REPOSITORY,
-        SchoolAuthorizationService,
-        UserAccountService,
-      ],
+      ) => new ListSchoolMembersUseCase(schools, memberships, authorization),
+      inject: [SCHOOL_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, SchoolAuthorizationService],
     },
     {
       provide: SuspendSchoolMemberUseCase,
@@ -243,65 +226,7 @@ import {
         new RevokeSchoolMemberUseCase(memberships, authorization),
       inject: [SCHOOL_MEMBERSHIP_REPOSITORY, SchoolAuthorizationService],
     },
-    {
-      provide: AssignSchoolMemberRoleUseCase,
-      useFactory: (
-        memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
-        authorization: SchoolAuthorizationService,
-        eventEmitter: EventEmitter2,
-      ) => new AssignSchoolMemberRoleUseCase(memberships, roles, authorization, eventEmitter),
-      inject: [SCHOOL_MEMBERSHIP_REPOSITORY, SCHOOL_ROLE_REPOSITORY, SchoolAuthorizationService, EventEmitter2],
-    },
-    {
-      provide: RemoveSchoolMemberRoleUseCase,
-      useFactory: (
-        memberships: SchoolMembershipRepository,
-        roles: SchoolRoleRepository,
-        authorization: SchoolAuthorizationService,
-        eventEmitter: EventEmitter2,
-      ) => new RemoveSchoolMemberRoleUseCase(memberships, roles, authorization, eventEmitter),
-      inject: [SCHOOL_MEMBERSHIP_REPOSITORY, SCHOOL_ROLE_REPOSITORY, SchoolAuthorizationService, EventEmitter2],
-    },
 
-    // --- roles
-    {
-      provide: ListSchoolRolesUseCase,
-      useFactory: (
-        roles: SchoolRoleRepository,
-        memberships: SchoolMembershipRepository,
-        authorization: SchoolAuthorizationService,
-      ) => new ListSchoolRolesUseCase(roles, memberships, authorization),
-      inject: [SCHOOL_ROLE_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, SchoolAuthorizationService],
-    },
-    {
-      provide: CreateSchoolRoleUseCase,
-      useFactory: (
-        roles: SchoolRoleRepository,
-        authorization: SchoolAuthorizationService,
-        eventEmitter: EventEmitter2,
-      ) => new CreateSchoolRoleUseCase(roles, authorization, eventEmitter),
-      inject: [SCHOOL_ROLE_REPOSITORY, SchoolAuthorizationService, EventEmitter2],
-    },
-    {
-      provide: UpdateSchoolRoleUseCase,
-      useFactory: (
-        roles: SchoolRoleRepository,
-        authorization: SchoolAuthorizationService,
-        eventEmitter: EventEmitter2,
-      ) => new UpdateSchoolRoleUseCase(roles, authorization, eventEmitter),
-      inject: [SCHOOL_ROLE_REPOSITORY, SchoolAuthorizationService, EventEmitter2],
-    },
-    {
-      provide: DeleteSchoolRoleUseCase,
-      useFactory: (
-        roles: SchoolRoleRepository,
-        memberships: SchoolMembershipRepository,
-        authorization: SchoolAuthorizationService,
-        eventEmitter: EventEmitter2,
-      ) => new DeleteSchoolRoleUseCase(roles, memberships, authorization, eventEmitter),
-      inject: [SCHOOL_ROLE_REPOSITORY, SCHOOL_MEMBERSHIP_REPOSITORY, SchoolAuthorizationService, EventEmitter2],
-    },
     {
       provide: UpdateSchoolUseCase,
       useFactory: (schools: SchoolRepository) =>

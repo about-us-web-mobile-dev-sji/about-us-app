@@ -21,4 +21,7 @@ export class UserEntity {
 
   @Column({ type: 'enum', enum: GlobalRole })
   globalRole!: GlobalRole;
+
+  @Column({ type: 'text', nullable: true })
+  avatarUrl!: string | null;
 }

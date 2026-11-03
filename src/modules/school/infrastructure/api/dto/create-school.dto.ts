@@ -4,4 +4,5 @@ export class CreateSchoolDto {
   phoneNumber?: string;
   email?: string;
   website?: string;
+  logo?: string;
 }

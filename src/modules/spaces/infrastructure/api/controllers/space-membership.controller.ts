@@ -26,6 +26,7 @@ import { GetEffectiveManagersUseCase } from '../../../application/use-cases/quer
 import { CanManageUseCase } from '../../../application/use-cases/queries/can-manage/can-manage.js';
 import { GetEffectiveMemberDesignationUseCase } from '../../../application/use-cases/queries/get-effective-member-designation/get-effective-member-designation.js';
 import type { UUID } from 'node:crypto';
+import { UserDirectory } from '../../../../user/application/user-directory.js';
 
 @ApiTags('space-memberships')
 @Controller('spaces/:spaceId/members')
@@ -41,7 +42,13 @@ export class SpaceMembershipController {
     private readonly getEffectiveManagersUseCase: GetEffectiveManagersUseCase,
     private readonly canManageUseCase: CanManageUseCase,
     private readonly getEffectiveDesignationUseCase: GetEffectiveMemberDesignationUseCase,
+    private readonly directory: UserDirectory,
   ) {}
+
+  private async present(membership: unknown): Promise<SpaceMembershipResponseDto> {
+    const users = await this.directory.summaries(SpaceMembershipResponseDto.userIdsOf(membership));
+    return SpaceMembershipResponseDto.fromDomain(membership, users);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Add a member to the space' })
@@ -53,7 +60,7 @@ export class SpaceMembershipController {
       role: dto.role,
       actorId: req.auth.subjectId as UUID,
     });
-    return SpaceMembershipResponseDto.fromDomain(result);
+    return this.present(result);
   }
 
   @Delete(':userId')
@@ -65,7 +72,7 @@ export class SpaceMembershipController {
       userId: userId as UUID,
       actorId: req.auth.subjectId as UUID,
     });
-    return SpaceMembershipResponseDto.fromDomain(result);
+    return this.present(result);
   }
 
   @Put('manager')
@@ -78,7 +85,7 @@ export class SpaceMembershipController {
       userId: dto.userId as UUID,
       actorId: req.auth.subjectId as UUID,
     });
-    return SpaceMembershipResponseDto.fromDomain(result);
+    return this.present(result);
   }
 
   @Delete('manager')
@@ -90,7 +97,7 @@ export class SpaceMembershipController {
       spaceId: spaceId as UUID,
       actorId: req.auth.subjectId as UUID,
     });
-    return SpaceMembershipResponseDto.fromDomain(result);
+    return this.present(result);
   }
 
   @Get()
@@ -104,9 +111,10 @@ export class SpaceMembershipController {
       status: query.status as any,
       role: query.kind as any,
     });
+    const users = await this.directory.summaries(result.items.flatMap(SpaceMembershipResponseDto.userIdsOf));
     return {
       ...result,
-      items: result.items.map(SpaceMembershipResponseDto.fromDomain),
+      items: result.items.map((membership) => SpaceMembershipResponseDto.fromDomain(membership, users)),
     };
   }
 
@@ -115,10 +123,12 @@ export class SpaceMembershipController {
   @ApiResponse({ status: 200, type: GetEffectiveManagersResponseDto })
   async getEffectiveManagers(@Param('spaceId') spaceId: string) {
     const result = await this.getEffectiveManagersUseCase.handle({ spaceId: spaceId as UUID });
+    const memberships = [...(result.directManager ? [result.directManager] : []), ...result.inheritedManagers];
+    const users = await this.directory.summaries(memberships.flatMap(SpaceMembershipResponseDto.userIdsOf));
     return {
       spaceId: result.spaceId,
-      directManager: result.directManager ? SpaceMembershipResponseDto.fromDomain(result.directManager) : null,
-      inheritedManagers: result.inheritedManagers.map(SpaceMembershipResponseDto.fromDomain),
+      directManager: result.directManager ? SpaceMembershipResponseDto.fromDomain(result.directManager, users) : null,
+      inheritedManagers: result.inheritedManagers.map((membership) => SpaceMembershipResponseDto.fromDomain(membership, users)),
     };
   }
 

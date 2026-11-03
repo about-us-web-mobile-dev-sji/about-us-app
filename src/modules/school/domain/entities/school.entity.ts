@@ -12,6 +12,7 @@ export interface SchoolProps {
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
+  logo: string | null;
 }
 
 export type NewSchool = Omit<SchoolProps, 'id'>;
@@ -21,6 +22,7 @@ export interface SchoolDetailsChanges {
   phoneNumber?: string | null;
   email?: string | null;
   website?: string | null;
+  logo?: string | null;
 }
 
 export class School {
@@ -32,6 +34,7 @@ export class School {
     email?: string | null;
     website?: string | null;
     createdBy: string;
+    logo?: string | null;
   }): School {
     const now = new Date();
 
@@ -53,6 +56,7 @@ export class School {
       phoneNumber: input.phoneNumber?.trim() || null,
       email: input.email?.trim() || null,
       website: input.website?.trim() || null,
+      logo: input.logo?.trim() || null,
       status: SchoolStatus.ACTIVE,
       createdAt: new Date(now),
       updatedAt: new Date(now),
@@ -76,6 +80,10 @@ export class School {
 
   get status(): SchoolStatus {
     return this.props.status;
+  }
+
+  get logo(): string | null {
+    return this.props.logo;
   }
 
   updateDetails(changes: SchoolDetailsChanges): void {
@@ -106,11 +114,18 @@ export class School {
         throw new InvalidSchoolException('Website must not exceed 500 characters');
       }
     }
+    const logo = changes.logo?.trim() || null;
+    if (changes.logo !== undefined) {
+      if (logo && logo.length > 500) {
+        throw new InvalidSchoolException('Logo URL must not exceed 500 characters');
+      }
+    }
 
     if (name !== undefined) this.props.name = name;
     if (changes.phoneNumber !== undefined) this.props.phoneNumber = phoneNumber;
     if (changes.email !== undefined) this.props.email = email;
     if (changes.website !== undefined) this.props.website = website;
+    if (changes.logo !== undefined) this.props.logo = logo;
     this.props.updatedAt = new Date();
   }
 

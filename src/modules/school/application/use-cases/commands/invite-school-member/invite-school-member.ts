@@ -1,20 +1,16 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InvitationSentEvent } from '../../../events/invitation-sent.event.js';
 import { SchoolInvitation } from '../../../../domain/entities/school-invitation.entity.js';
-import { SchoolRoleKey } from '../../../../domain/enums/school-role-key.enum.js';
+import { SchoolRole } from '../../../../domain/enums/school-role.enum.js';
 import { MembershipStatus } from '../../../../domain/enums/membership-status.enum.js';
-import { SchoolAction } from '../../../../domain/enums/school-action.enum.js';
 import { SchoolStatus } from '../../../../domain/enums/school-status.enum.js';
 import { InvalidSchoolException } from '../../../../domain/exceptions/invalid-school.exception.js';
 import { InvalidSchoolMembershipException } from '../../../../domain/exceptions/invalid-school-membership.exception.js';
-import { SchoolRoleNotFoundException } from '../../../../domain/exceptions/school-role-not-found.exception.js';
 import { SchoolMembershipActionForbiddenException } from '../../../../domain/exceptions/school-membership-action-forbidden.exception.js';
 import { SchoolNotFoundException } from '../../../../domain/exceptions/school-not-found.exception.js';
 import type { SchoolAuthorizationService } from '../../../services/school-authorization.service.js';
 import type { SchoolInvitationRepository } from '../../../../domain/repositories/i-school-invitation.repository.js';
 import type { SchoolMembershipRepository } from '../../../../domain/repositories/i-school-membership.repository.js';
-import type { SchoolRoleRepository } from '../../../../domain/repositories/i-school-role.repository.js';
-import { ensureSystemRoles } from '../../../services/school-role-provisioning.js';
 import type { SchoolRepository } from '../../../../domain/repositories/i-school.repository.js';
 import type { UserAccountService } from '../../../../../user/application/user-account.service.js';
 import type { InviteSchoolMemberInput } from './invite-school-member.input.js';
@@ -28,7 +24,6 @@ export class InviteSchoolMemberUseCase {
     private readonly schools: SchoolRepository,
     private readonly invitations: SchoolInvitationRepository,
     private readonly memberships: SchoolMembershipRepository,
-    private readonly roles: SchoolRoleRepository,
     private readonly users: UserAccountService,
     private readonly eventEmitter: EventEmitter2,
     private readonly authorization: SchoolAuthorizationService,
@@ -59,33 +54,9 @@ export class InviteSchoolMemberUseCase {
       );
     }
 
-    const actor = { userId: input.performedBy, platformAdmin: input.platformAdmin };
-    await this.authorization.assertCan(
-      actor,
-      SchoolAction.INVITE_MEMBER,
+    await this.authorization.assertSchoolAdmin(
+      { userId: input.performedBy, platformAdmin: input.platformAdmin },
       input.schoolId,
-    );
-
-    // The administrator is only ever appointed through the administrator
-    // replacement, never through an invitation.
-    const role = input.roleId
-      ? await this.roles.findById(input.roleId)
-      : (await ensureSystemRoles(this.roles, input.schoolId))[
-          SchoolRoleKey.STUDENT
-        ];
-    if (!role || role.schoolId !== input.schoolId) {
-      throw new SchoolRoleNotFoundException(input.roleId ?? 'STUDENT');
-    }
-    if (role.isAdmin) {
-      throw new InvalidSchoolMembershipException(
-        'The administrator role cannot be given through an invitation',
-      );
-    }
-    // Inviting hands the role's permissions to the invitee.
-    await this.authorization.assertCanGrantPermissions(
-      actor,
-      input.schoolId,
-      role.permissions,
     );
 
     const schoolMemberships = await this.memberships.findBySchool(
@@ -110,7 +81,7 @@ export class InviteSchoolMemberUseCase {
       }
       if (existing.status === MembershipStatus.ACTIVE) {
         throw new InvalidSchoolMembershipException(
-          'This user is already a member of this school; assign them the role instead',
+          'This user is already a member of this school',
         );
       }
     }
@@ -118,7 +89,9 @@ export class InviteSchoolMemberUseCase {
     const { invitation, token } = SchoolInvitation.issue({
       schoolId: input.schoolId,
       email,
-      roleId: role.id,
+      // An invitation always makes a member: the administrator is only
+      // appointed at the school's creation or through the replacement.
+      role: SchoolRole.MEMBER,
       invitedBy: input.performedBy,
     });
     const saved = await this.invitations.save(invitation);
@@ -153,7 +126,7 @@ export class InviteSchoolMemberUseCase {
         id: primitives.id,
         schoolId: primitives.schoolId,
         email: primitives.email,
-        roleId: primitives.roleId,
+        role: primitives.role,
         status: primitives.status,
         expiresAt: primitives.expiresAt,
       },

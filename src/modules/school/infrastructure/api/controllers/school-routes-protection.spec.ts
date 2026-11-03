@@ -12,7 +12,6 @@ import { SchoolController } from './school.controller.js';
 import { SchoolAdministrationController } from './school-administration.controller.js';
 import { SchoolInvitationController } from './school-invitation.controller.js';
 import { SchoolMemberController } from './school-member.controller.js';
-import { SchoolRoleController } from './school-role.controller.js';
 
 const contextFor = (
   controller: new (...args: never[]) => object,
@@ -33,10 +32,6 @@ describe('school routes protected by @Roles(SUPER_ADMIN)', () => {
   const routes: Array<[string, new (...args: never[]) => object, string]> = [
     ['GET /schools', SchoolController, 'findAll'],
     ['POST /schools', SchoolController, 'create'],
-    ['GET /schools/:schoolId/roles', SchoolRoleController, 'list'],
-    ['POST /schools/:schoolId/roles', SchoolRoleController, 'create'],
-    ['PATCH /schools/:schoolId/roles/:roleId', SchoolRoleController, 'update'],
-    ['DELETE /schools/:schoolId/roles/:roleId', SchoolRoleController, 'remove'],
     ['PATCH /schools/:id/toggle-block', SchoolAdministrationController, 'toggleBlock'],
     ['PATCH /schools/:id/disable', SchoolAdministrationController, 'disable'],
     ['PATCH /schools/:schoolId', SchoolAdministrationController, 'update'],
@@ -63,9 +58,8 @@ const handlersOf = (controller: new (...args: never[]) => object) =>
   );
 
 describe('school authorization rests on the school roles, not on the global role', () => {
-  it('limits school and role controllers to the platform administrator', () => {
+  it('limits the school controller to the platform administrator', () => {
     expect(Reflect.getMetadata(ROLES_KEY, SchoolController)).toEqual([GlobalRole.SUPER_ADMIN]);
-    expect(Reflect.getMetadata(ROLES_KEY, SchoolRoleController)).toEqual([GlobalRole.SUPER_ADMIN]);
 
     const withRoles: string[] = [];
     for (const controller of [
@@ -73,7 +67,6 @@ describe('school authorization rests on the school roles, not on the global role
       SchoolAdministrationController,
       SchoolInvitationController,
       SchoolMemberController,
-      SchoolRoleController,
     ]) {
       for (const name of handlersOf(controller)) {
         const metadata = Reflect.getMetadata(
@@ -131,7 +124,7 @@ describe('school authorization rests on the school roles, not on the global role
 
   it('nothing of the former model remains in the sources', () => {
     const root = join(__dirname, '..', '..', '..');
-    const forbidden = /MembershipRole\b|grantedPermissions|performedByGlobalRole|MANAGE_MEMBER_PERMISSIONS|CHANGE_MEMBER_ROLE|INVITE_ADMIN|UPDATE_SCHOOL|findActiveAdminBySchool/;
+    const forbidden = /MembershipRole\b|grantedPermissions|performedByGlobalRole|MANAGE_MEMBER_PERMISSIONS|CHANGE_MEMBER_ROLE|INVITE_ADMIN|UPDATE_SCHOOL|findActiveAdminBySchool|SchoolAction|SchoolRoleKey|roleIds|SCHOOL_ROLE_REPOSITORY/;
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir)) {

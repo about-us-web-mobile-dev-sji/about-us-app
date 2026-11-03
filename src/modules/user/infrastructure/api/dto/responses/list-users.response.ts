@@ -10,6 +10,8 @@ export class UserResponse {
   email: string;
   status: UserStatus;
   globalRole: GlobalRole;
+  fullName: string | null;
+  avatarUrl: string | null;
 
   static fromUser(user: User): UserResponse {
     return {
@@ -19,6 +21,8 @@ export class UserResponse {
       email: user.email,
       status: user.status,
       globalRole: user.globalRole,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
     };
   }
 }
