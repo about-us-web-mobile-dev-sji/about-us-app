@@ -4,9 +4,15 @@ import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSource, type DataSourceOptions } from 'typeorm';
 import databaseConfig from '../../../config/data-base.config.js';
 import { MoveAuthTablesToAuthenticationSchema1791331200000 } from './migrations/1791331200000-MoveAuthTablesToAuthenticationSchema.js';
+import { CreateMediathequeSchema1791400000000 } from './migrations/1791400000000-CreateMediathequeSchema.js';
+import { AddMediaNomCategorie1791500000000 } from './migrations/1791500000000-AddMediaNomCategorie.js';
 
 /** Applied in order at start-up, before any query (and before synchronize). */
-const MIGRATIONS = [MoveAuthTablesToAuthenticationSchema1791331200000];
+const MIGRATIONS = [
+  MoveAuthTablesToAuthenticationSchema1791331200000,
+  CreateMediathequeSchema1791400000000,
+  AddMediaNomCategorie1791500000000,
+];
 
 @Module({
   imports: [
@@ -43,6 +49,7 @@ const MIGRATIONS = [MoveAuthTablesToAuthenticationSchema1791331200000];
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS school');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS notification');
             await dataSource.query('CREATE SCHEMA IF NOT EXISTS spaces');
+            await dataSource.query('CREATE SCHEMA IF NOT EXISTS mediatheque');
 
             // Ancienne contrainte (schoolId, kind) bloquait plusieurs STANDARD par école.
             await dataSource.query(
