@@ -22,7 +22,6 @@ const config: MediathequeConfig = {
   publicBaseUrl: 'https://example.supabase.co/storage/v1/object/public/media',
   maxFileSizeBytes: 1024,
   allowedMimeTypes: ['image/png', 'application/pdf'],
-  convertApiSecret: 'token',
 };
 
 describe('RequestPresignedUrl', () => {

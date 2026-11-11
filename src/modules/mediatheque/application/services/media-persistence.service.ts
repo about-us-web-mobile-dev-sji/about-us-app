@@ -6,7 +6,6 @@ import { MediaCategorie } from '../../domain/enums/media-categorie.enum.js';
 import { InvalidMediaException } from '../../domain/exceptions/invalid-media.exception.js';
 import type { MediaRepository } from '../../domain/repositories/i-media.repository.js';
 import type { MediathequeConfig } from '../../infrastructure/mediatheque.config.js';
-import type { ImageConverterGateway } from '../gateways/i-image-converter.gateway.js';
 import type { ObjectStorageGateway } from '../gateways/i-object-storage.gateway.js';
 
 export interface PersistMediaInput {
@@ -41,7 +40,6 @@ export class MediaPersistenceService {
   constructor(
     private readonly storage: ObjectStorageGateway,
     private readonly medias: MediaRepository,
-    private readonly converter: ImageConverterGateway,
     private readonly config: MediathequeConfig,
   ) {}
 
@@ -59,20 +57,9 @@ export class MediaPersistenceService {
 
     this.assertCategorieMatchesMime(input.categorie, input.mimeType);
 
-    let body = input.body;
-    let mimeType = input.mimeType;
-    let ext = extensionFor(mimeType, input.fileName);
-
-    if (input.categorie === MediaCategorie.PHOTO) {
-      const converted = await this.converter.toWebp({
-        body,
-        mimeType,
-        fileName: input.fileName || `${nom}.${ext}`,
-      });
-      body = converted.body;
-      mimeType = converted.mimeType;
-      ext = 'webp';
-    }
+    const mimeType = input.mimeType.trim().toLowerCase();
+    const ext = extensionFor(mimeType, input.fileName);
+    const body = input.body;
 
     const safeNom = nom.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'media';
     const key = input.espaceId
@@ -122,9 +109,10 @@ export class MediaPersistenceService {
     mimeType: string,
   ): void {
     if (categorie === MediaCategorie.PHOTO) {
-      if (!PHOTO_MIMES.has(mimeType)) {
+      // La conversion WebP est faite côté frontend avant l'envoi.
+      if (mimeType !== 'image/webp') {
         throw new InvalidMediaException(
-          'photo category requires an image file (jpeg, png, gif, webp)',
+          'photo category requires image/webp (convert on the client before upload)',
         );
       }
       return;

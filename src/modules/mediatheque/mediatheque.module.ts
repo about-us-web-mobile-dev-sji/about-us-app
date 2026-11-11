@@ -5,10 +5,6 @@ import type { Repository } from 'typeorm';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import {
-  IMAGE_CONVERTER,
-  type ImageConverterGateway,
-} from './application/gateways/i-image-converter.gateway.js';
-import {
   OBJECT_STORAGE,
   type ObjectStorageGateway,
 } from './application/gateways/i-object-storage.gateway.js';
@@ -27,7 +23,6 @@ import {
   PENDING_UPLOAD_REPOSITORY,
   type PendingUploadRepository,
 } from './domain/repositories/i-pending-upload.repository.js';
-import { ConvertApiImageConverter } from './infrastructure/conversion/convertapi-image-converter.js';
 import { MediathequeExceptionFilter } from './infrastructure/http/mediatheque-exception.filter.js';
 import { MediathequeController } from './infrastructure/http/mediatheque.controller.js';
 import {
@@ -57,12 +52,6 @@ import { S3ObjectStorage } from './infrastructure/storage/s3-object-storage.js';
       useFactory: (config: MediathequeConfig) => new S3ObjectStorage(config),
     },
     {
-      provide: IMAGE_CONVERTER,
-      inject: [MEDIATHEQUE_CONFIG],
-      useFactory: (config: MediathequeConfig) =>
-        new ConvertApiImageConverter(config.convertApiSecret),
-    },
-    {
       provide: MEDIA_REPOSITORY,
       useFactory: (repo: Repository<MediaOrmEntity>) =>
         new TypeormMediaRepository(repo),
@@ -76,18 +65,12 @@ import { S3ObjectStorage } from './infrastructure/storage/s3-object-storage.js';
     },
     {
       provide: MediaPersistenceService,
-      inject: [
-        OBJECT_STORAGE,
-        MEDIA_REPOSITORY,
-        IMAGE_CONVERTER,
-        MEDIATHEQUE_CONFIG,
-      ],
+      inject: [OBJECT_STORAGE, MEDIA_REPOSITORY, MEDIATHEQUE_CONFIG],
       useFactory: (
         storage: ObjectStorageGateway,
         medias: MediaRepository,
-        converter: ImageConverterGateway,
         config: MediathequeConfig,
-      ) => new MediaPersistenceService(storage, medias, converter, config),
+      ) => new MediaPersistenceService(storage, medias, config),
     },
     {
       provide: RequestPresignedUrl,

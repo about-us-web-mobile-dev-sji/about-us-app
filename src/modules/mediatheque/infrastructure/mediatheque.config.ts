@@ -25,7 +25,6 @@ export interface MediathequeConfig {
   publicBaseUrl: string;
   maxFileSizeBytes: number;
   allowedMimeTypes: string[];
-  convertApiSecret: string;
 }
 
 export function mediathequeConfig(
@@ -71,6 +70,5 @@ export function mediathequeConfig(
     publicBaseUrl,
     maxFileSizeBytes,
     allowedMimeTypes,
-    convertApiSecret: env.CONVERTAPI_SECRET?.trim() ?? '',
   };
 }
