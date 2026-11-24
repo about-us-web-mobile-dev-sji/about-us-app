@@ -6,12 +6,14 @@ import databaseConfig from '../../../config/data-base.config.js';
 import { MoveAuthTablesToAuthenticationSchema1791331200000 } from './migrations/1791331200000-MoveAuthTablesToAuthenticationSchema.js';
 import { CreateMediathequeSchema1791400000000 } from './migrations/1791400000000-CreateMediathequeSchema.js';
 import { AddMediaNomCategorie1791500000000 } from './migrations/1791500000000-AddMediaNomCategorie.js';
+import { AddMediaVersion1791600000000 } from './migrations/1791600000000-AddMediaVersion.js';
 
 /** Applied in order at start-up, before any query (and before synchronize). */
 const MIGRATIONS = [
   MoveAuthTablesToAuthenticationSchema1791331200000,
   CreateMediathequeSchema1791400000000,
   AddMediaNomCategorie1791500000000,
+  AddMediaVersion1791600000000,
 ];
 
 @Module({

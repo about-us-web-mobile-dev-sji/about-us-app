@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ObjectStorageGateway } from './application/gateways/i-object-storage.gateway.js';
 import { ConfirmUpload } from './application/use-cases/commands/confirm-upload/confirm-upload.js';
 import { DeleteMedia } from './application/use-cases/commands/delete-media/delete-media.js';
+import { RegisterInternalResource } from './application/use-cases/commands/register-internal-resource/register-internal-resource.js';
 import { RequestPresignedUrl } from './application/use-cases/commands/request-presigned-url/request-presigned-url.js';
 import { Media } from './domain/entities/media.entity.js';
+import { Ressource } from './domain/entities/ressource.entity.js';
 import { MediaCategorie } from './domain/enums/media-categorie.enum.js';
 import { InvalidMediaException } from './domain/exceptions/invalid-media.exception.js';
 import { MediaNotFoundException } from './domain/exceptions/media-not-found.exception.js';
@@ -114,6 +116,7 @@ describe('DeleteMedia', () => {
           typeFichier: 'image/png',
           categorie: MediaCategorie.PHOTO,
           storageKey: 'medias/a',
+          version: '1',
           createdAt: new Date(),
         }),
       ),
@@ -134,5 +137,33 @@ describe('DeleteMedia', () => {
     await expect(
       new DeleteMedia(storage, medias).handle({ id: randomUUID() }),
     ).rejects.toBeInstanceOf(MediaNotFoundException);
+  });
+});
+
+describe('RegisterInternalResource', () => {
+  it('registers a resource with the internal contract fields', async () => {
+    const resourceId = randomUUID();
+    const espaceId = randomUUID();
+    const medias = {
+      findById: vi.fn().mockResolvedValue(null),
+      save: vi.fn().mockImplementation(async (m: Ressource) => m),
+    } as unknown as MediaRepository;
+
+    const result = await new RegisterInternalResource(medias).handle({
+      resource_id: resourceId,
+      espace_id: espaceId,
+      url: 'https://example.supabase.co/storage/v1/object/public/mediatheque/espaces/a/photo.webp',
+      version: '1',
+      mime_type: 'image/webp',
+    });
+
+    expect(result).toEqual({
+      resource_id: resourceId,
+      espace_id: espaceId,
+      url: 'https://example.supabase.co/storage/v1/object/public/mediatheque/espaces/a/photo.webp',
+      version: '1',
+      mime_type: 'image/webp',
+    });
+    expect(medias.save).toHaveBeenCalledOnce();
   });
 });

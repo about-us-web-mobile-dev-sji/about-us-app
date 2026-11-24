@@ -1,4 +1,4 @@
-import type { UUID } from 'node:crypto';
+import { randomUUID, type UUID } from 'node:crypto';
 import type { MediaCategorie } from '../enums/media-categorie.enum.js';
 
 export interface MediaProps {
@@ -9,6 +9,7 @@ export interface MediaProps {
   typeFichier: string;
   categorie: MediaCategorie;
   storageKey: string;
+  version: string;
   createdAt: Date;
 }
 
@@ -16,11 +17,16 @@ export class Media {
   protected constructor(protected props: MediaProps) {}
 
   static create(
-    input: Omit<MediaProps, 'id' | 'createdAt'> & { createdAt?: Date },
+    input: Omit<MediaProps, 'id' | 'createdAt' | 'version'> & {
+      id?: UUID;
+      version?: string;
+      createdAt?: Date;
+    },
   ): Media {
     return new Media({
       ...input,
-      id: undefined,
+      id: input.id ?? randomUUID(),
+      version: input.version?.trim() || '1',
       createdAt: input.createdAt ?? new Date(),
     });
   }
@@ -55,6 +61,10 @@ export class Media {
 
   get storageKey(): string {
     return this.props.storageKey;
+  }
+
+  get version(): string {
+    return this.props.version;
   }
 
   get createdAt(): Date {

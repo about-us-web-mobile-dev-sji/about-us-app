@@ -3,7 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
 } from 'typeorm';
 import type { UUID } from 'node:crypto';
 import { MediaCategorie } from '../../../domain/enums/media-categorie.enum.js';
@@ -11,7 +11,7 @@ import { MediaCategorie } from '../../../domain/enums/media-categorie.enum.js';
 @Entity({ schema: 'mediatheque', name: 'medias' })
 @Index(['storageKey'], { unique: true })
 export class MediaOrmEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'uuid' })
   id!: UUID;
 
   @Column({ type: 'varchar', length: 255 })
@@ -31,6 +31,9 @@ export class MediaOrmEntity {
 
   @Column({ type: 'varchar', length: 512, name: 'storage_key' })
   storageKey!: string;
+
+  @Column({ type: 'varchar', length: 64, default: '1' })
+  version!: string;
 
   @Column({ type: 'uuid', nullable: true, name: 'espace_id' })
   espaceId!: UUID | null;

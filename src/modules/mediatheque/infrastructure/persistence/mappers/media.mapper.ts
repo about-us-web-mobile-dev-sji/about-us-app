@@ -13,6 +13,7 @@ export class MediaMapper {
       typeFichier: entity.typeFichier,
       categorie: entity.categorie,
       storageKey: entity.storageKey,
+      version: entity.version || '1',
       createdAt: entity.createdAt,
     };
     if (entity.espaceId) {
@@ -24,13 +25,17 @@ export class MediaMapper {
   static toPersistence(media: MediaAggregate): MediaOrmEntity {
     const primitives = media.toPrimitives();
     const entity = new MediaOrmEntity();
-    if (primitives.id) entity.id = primitives.id;
+    if (!primitives.id) {
+      throw new Error('Media id is required for persistence');
+    }
+    entity.id = primitives.id;
     entity.nom = primitives.nom;
     entity.url = primitives.url;
     entity.taille = String(primitives.taille);
     entity.typeFichier = primitives.typeFichier;
     entity.categorie = primitives.categorie;
     entity.storageKey = primitives.storageKey;
+    entity.version = primitives.version;
     entity.createdAt = primitives.createdAt;
     entity.espaceId =
       'espaceId' in primitives

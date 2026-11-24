@@ -1,4 +1,4 @@
-import type { UUID } from 'node:crypto';
+import { randomUUID, type UUID } from 'node:crypto';
 import { Media, type MediaProps } from './media.entity.js';
 
 export interface RessourceProps extends MediaProps {
@@ -11,11 +11,16 @@ export class Ressource extends Media {
   }
 
   static create(
-    input: Omit<RessourceProps, 'id' | 'createdAt'> & { createdAt?: Date },
+    input: Omit<RessourceProps, 'id' | 'createdAt' | 'version'> & {
+      id?: UUID;
+      version?: string;
+      createdAt?: Date;
+    },
   ): Ressource {
     return new Ressource({
       ...input,
-      id: undefined,
+      id: input.id ?? randomUUID(),
+      version: input.version?.trim() || '1',
       createdAt: input.createdAt ?? new Date(),
     });
   }

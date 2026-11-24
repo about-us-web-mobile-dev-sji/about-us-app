@@ -13,6 +13,7 @@ import { ConfirmUpload } from './application/use-cases/commands/confirm-upload/c
 import { DeleteMedia } from './application/use-cases/commands/delete-media/delete-media.js';
 import { ImportFromUrl } from './application/use-cases/commands/import-from-url/import-from-url.js';
 import { ImportLocal } from './application/use-cases/commands/import-local/import-local.js';
+import { RegisterInternalResource } from './application/use-cases/commands/register-internal-resource/register-internal-resource.js';
 import { RequestPresignedUrl } from './application/use-cases/commands/request-presigned-url/request-presigned-url.js';
 import { ListRessources } from './application/use-cases/queries/list-ressources/list-ressources.js';
 import {
@@ -23,6 +24,7 @@ import {
   PENDING_UPLOAD_REPOSITORY,
   type PendingUploadRepository,
 } from './domain/repositories/i-pending-upload.repository.js';
+import { InternalResourceController } from './infrastructure/http/internal-resource.controller.js';
 import { MediathequeExceptionFilter } from './infrastructure/http/mediatheque-exception.filter.js';
 import { MediathequeController } from './infrastructure/http/mediatheque.controller.js';
 import {
@@ -42,7 +44,7 @@ import { S3ObjectStorage } from './infrastructure/storage/s3-object-storage.js';
     TypeOrmModule.forFeature([MediaOrmEntity, PendingUploadOrmEntity]),
     AuthModule,
   ],
-  controllers: [MediathequeController],
+  controllers: [MediathequeController, InternalResourceController],
   providers: [
     { provide: APP_FILTER, useClass: MediathequeExceptionFilter },
     { provide: MEDIATHEQUE_CONFIG, useFactory: () => mediathequeConfig() },
@@ -113,6 +115,13 @@ import { S3ObjectStorage } from './infrastructure/storage/s3-object-storage.js';
       inject: [MEDIA_REPOSITORY],
       useFactory: (medias: MediaRepository) => new ListRessources(medias),
     },
+    {
+      provide: RegisterInternalResource,
+      inject: [MEDIA_REPOSITORY],
+      useFactory: (medias: MediaRepository) =>
+        new RegisterInternalResource(medias),
+    },
   ],
 })
 export class MediathequeModule {}
+
