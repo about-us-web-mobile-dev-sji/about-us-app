@@ -1,12 +1,17 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule, ObserveInstrument } from './app.module.js';
+import { json, urlencoded } from 'express';
 import cookieParser from 'cookie-parser';
+import { AppModule, ObserveInstrument } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     instrument: ObserveInstrument,
+    bodyParser: false,
   });
 
+  // Import local (base64) peut atteindre ~20 Mo de fichier brut.
+  app.use(json({ limit: '28mb' }));
+  app.use(urlencoded({ extended: true, limit: '28mb' }));
   app.use(cookieParser());
   app.enableShutdownHooks();
 
